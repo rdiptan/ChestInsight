@@ -7,6 +7,8 @@ from streamlit_option_menu import option_menu
 from streamlit_extras.colored_header import colored_header
 from image_annotation import run_cls, dataframe_annotation
 from dicom_viewer_and_annon import anonymize_dicom_file, dicom_viewer
+from image_enhancement import clahe_image_enhance, canny_enhance, threshold_enhance
+import cv2
 warnings.filterwarnings("ignore")
 
 def features():
@@ -40,8 +42,39 @@ def features():
     
     # ImgenhancementTab: Here is the entry point for SOTA Image enhancement
     with ImgEnhancementTab:
-        st.write('wait a minute')
-    
+        path = './data/'
+        image = st.file_uploader('Upload an image for enhancement')
+        if image:
+            option = st.selectbox(
+                'Select an algorithm for image enhancement',
+                ('Canny', 'Contrast limited adaptive histogram equalization', 'Threshold'), index=1)
+
+            col_1, col_2 = st.columns(2)
+            col_1.image(image, caption='Original Image', use_column_width=True)
+            if option == 'Canny':
+                if col_1.button('Click to perform enhancement'):
+                    output_image = canny_enhance(path + image.name)
+                    col_2.image(output_image, caption='Canny Enhanced Image')
+                if col_2.button('Save Enhanced Image'):
+                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_canny_enhanced.jpeg', canny_enhance(path + image.name))
+                    st.success(f"Image with Canny Enhancement saved!")
+
+            elif option == 'Threshold':
+                if col_1.button('Click to perform enhancement'):
+                    output_image = threshold_enhance(path + image.name)
+                    col_2.image(output_image, caption='Threshold Enhanced Image')
+                if col_2.button('Save Enhanced Image'):
+                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_threshold_enhanced.jpeg', threshold_enhance(path + image.name))
+                    st.success(f"Image with Threshold Enhancement saved!")
+
+            elif option == 'Contrast limited adaptive histogram equalization':
+                if col_1.button('Click to perform enhancement'):
+                    output_image = clahe_image_enhance(path + image.name)
+                    col_2.image(output_image, caption='CLAHE Enhanced Image')
+                if col_2.button('Save Enhanced Image'):
+                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_CLAHE_enhanced.jpeg', clahe_image_enhance(path + image.name))
+                    st.success(f"Image with Contrast limited adaptive histogram equalization Enhancement saved!")
+
     # ImgAnnotationTab: Here is the entry point for image annotation
     with ImgAnnotationTab:
         custom_labels = ["", "lesion", "positive", "negative", "tumor", None]
@@ -81,7 +114,7 @@ def main():
         description="Use the tabs below to tryout our dedicated tools",
         color_name="violet-70",)
         features()
-        
+
 
 if __name__ == "__main__":
     main()
