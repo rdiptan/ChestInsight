@@ -1,0 +1,26 @@
+<annotation>
+    <folder>data</folder>
+    <filename>Skull_2_NAME^NONE_Volume_0.PNG</filename>
+    <path>/Users/diptanregmi/Documents/ChestInsight/data/Skull_2_NAME^NONE_Volume_0.PNG</path>
+    <source>
+        <database>Unknown</database>
+    </source>
+    <size>
+        <width>601</width>
+        <height>396</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>negative</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>214</xmin>
+            <ymin>123</ymin>
+            <xmax>397</xmax>
+            <ymax>290</ymax>
+        </bndbox>
+    </object>
+</annotation>

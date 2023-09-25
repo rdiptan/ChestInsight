@@ -1,0 +1,26 @@
+<annotation>
+    <folder>data</folder>
+    <filename>SamplePNGImage_200kbmb.png</filename>
+    <path>/Users/diptanregmi/Documents/ChestInsight/data/SamplePNGImage_200kbmb.png</path>
+    <source>
+        <database>Unknown</database>
+    </source>
+    <size>
+        <width>400</width>
+        <height>250</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name></name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>60</xmin>
+            <ymin>37</ymin>
+            <xmax>141</xmax>
+            <ymax>88</ymax>
+        </bndbox>
+    </object>
+</annotation>
