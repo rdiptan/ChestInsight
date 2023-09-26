@@ -8,6 +8,7 @@ from streamlit_extras.colored_header import colored_header
 from image_annotation import run_cls, dataframe_annotation
 from dicom_viewer_and_annon import anonymize_dicom_file, dicom_viewer
 from image_enhancement import clahe_image_enhance, canny_enhance, threshold_enhance
+from src.full_model.generate_reports_for_images import mainz
 import cv2
 warnings.filterwarnings("ignore")
 
@@ -89,7 +90,19 @@ def features():
     
     # PredictionTab: Here is the entry point for report generation
     with PredictionTab:
-        st.write('wait a minute')
+        uploaded_image = st.file_uploader('Upload file for Report Generation!')
+        def coloured_to_gray_scale(input_image: str, path:str):
+            img = cv2.imread(input_image)
+            gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            return cv2.imwrite(f'{path}{input_image.split("/")[2].split(".")[0]}_gray_scaled.jpg', gray_image)
+        path = "./data/"
+        col_1, col_2 = st.columns(2)   
+        if uploaded_image:
+            col_1.image(uploaded_image)
+            coloured_to_gray_scale(f"{path}{uploaded_image.name}", path)
+            if col_1.button('Generate Report'):    
+                report = mainz(f"{path}{uploaded_image.name.split('.')[0]}_gray_scaled.jpg")
+                col_2.write(report)
 
 
 def main():

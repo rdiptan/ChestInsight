@@ -1,9 +1,0 @@
-image,label_idx,Report,Label
-sample-city-park-400x300.jpg,5,,
-SamplePNGImage_100kbmb.png,5,,
-Skull_2_NAME^NONE_Volume_2.jpg,5,,
-Skull_2_NAME^NONE_Volume_3.jpg,5,,
-Skull_2_NAME^NONE_Volume_1.jpg,4,This patient has a tumor.,tumor
-Skull_2_NAME^NONE_Volume_0.PNG,0,,
-SamplePNGImage_200kbmb.png,0,,
-sample-clouds-400x300.jpg,0,,
