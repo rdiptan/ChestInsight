@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from PIL import Image
 from matplotlib.pyplot import imshow, show, subplot, title, get_cmap, hist
 def clahe_image_enhance(input_image:str):
@@ -19,15 +20,17 @@ def clahe_image_enhance(input_image:str):
     equalized = clahe.apply(gray)
 
     return equalized
-def canny_enhance(input_image: str):
-    image = cv2.imread(input_image)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    imgBlur = cv2.GaussianBlur(gray, (5, 5), 1)
-    imgCanny = cv2.Canny(imgBlur, 10, 50)
-    return imgCanny
 
-def threshold_enhance(input_image: str):
+def increase_brightness(input_image: str ,value):
     image = cv2.imread(input_image)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(gray, 115, 255, 0)  # 160
-    return thresh
+    value = value
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+
+    lim = 255 - value
+    v[v > lim] = 255
+    v[v <= lim] += value
+
+    final_hsv = cv2.merge((h, s, v))
+    img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    return img
