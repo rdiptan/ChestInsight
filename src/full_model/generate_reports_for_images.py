@@ -167,7 +167,7 @@ def get_model(checkpoint_path):
     return model
 
 
-def mainz(input_image:str):
+def main_model(input_image:str):
     checkpoint_path = "./full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
     # checkpoint_path = "/Users/diptanregmi/Documents/Chest_Insight_Model/rgrg/full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
     
@@ -202,4 +202,4 @@ def mainz(input_image:str):
     return generated_reports
 
 if __name__ == "__main__":
-    mainz()
+    main_model()
