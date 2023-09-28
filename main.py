@@ -8,7 +8,7 @@ from streamlit_extras.colored_header import colored_header
 from image_annotation import run_cls, dataframe_annotation
 from dicom_viewer_and_annon import anonymize_dicom_file, dicom_viewer
 from image_enhancement import clahe_image_enhance,increase_brightness
-from src.full_model.generate_reports_for_images import mainz
+from src.full_model.generate_reports_for_images import main_model
 import cv2
 import pandas as pd
 import numpy as np
@@ -100,7 +100,7 @@ def features():
             col_1.image(uploaded_image)
             coloured_to_gray_scale(f"{path}{uploaded_image.name}", path)
             if col_1.button('Generate Report'):    
-                report = mainz(f"{path}{uploaded_image.name.split('.')[0]}_gray_scaled.jpg")
+                report = main_model(f"{path}{uploaded_image.name.split('.')[0]}_gray_scaled.jpg")
                 col_2.write(report)
 
 
