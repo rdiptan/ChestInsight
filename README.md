@@ -1,7 +1,7 @@
 # ChestInsight
 ### Smart Chest Xray Analysis and Report Generation
 
-This project aims to provide a smart solution for chest x-ray analysis and report generation. The project is divided into series of steps including dicom image annonymization, image annotation, image enhancement and report generation. The report generation part includes natural language processing and deep learning techniques.
+This project aims to provide a smart solution for chest x-ray analysis and report generation. The project is divided into series of steps including dicom image anonymization, image annotation, image enhancement and report generation. The report generation part includes natural language processing and deep learning techniques adopted from [rgrg](https://github.com/ttanida/rgrg).
 
 ### Installation
 To install the required packages, run the following command:
