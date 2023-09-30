@@ -5,6 +5,9 @@ This project aims to provide a smart solution for chest x-ray analysis and repor
 
 ### Installation
 Clone the repository:
+
+```git clone https://github.com/rdiptan/ChestInsight.git```
+
 To install the required packages, run the following command:
 
 ```pip install -r requirements.txt``` 
