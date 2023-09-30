@@ -136,7 +136,7 @@ def run_cls(img_dir, labels):
         report = col2.text_input('write report')
     return select_label , report
 
-
+# Function to annotate the dataframe with the selected label and report.
 def dataframe_annotation(path, custom_labels, select_label, report):
     """
     Function to annotate the dataframe with the selected label and report.

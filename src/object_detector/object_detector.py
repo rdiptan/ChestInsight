@@ -259,3 +259,6 @@ class ObjectDetector(nn.Module):
                 # we additionally need the detections to evaluate the object detector
                 # losses will be an empty dict if targets == None (i.e. during inference)
                 return losses, detections, top_region_features, class_detected
+    def inference(self, image):
+        losses, detections, top_region_features, class_detected = self.forward(image)
+        return top_region_features

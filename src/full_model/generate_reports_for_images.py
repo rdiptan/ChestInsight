@@ -139,7 +139,6 @@ def get_image_tensor(image_path):
             ToTensorV2(),
         ]
     )
-    print(type(image))
     transform = val_test_transforms(image=image)
     image_transformed = transform["image"]  # shape (1, 512, 512)
     image_transformed_batch = image_transformed.unsqueeze(0)  # shape (1, 1, 512, 512)
