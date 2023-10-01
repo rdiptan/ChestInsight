@@ -60,6 +60,7 @@ from src.full_model.run_configurations import (
     BERTSCORE_SIMILARITY_THRESHOLD,
 )
 from src.path_datasets_and_weights import path_chexbert_weights
+# torch.cuda.is_available = lambda : False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

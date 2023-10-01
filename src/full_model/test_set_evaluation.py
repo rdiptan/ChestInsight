@@ -47,6 +47,7 @@ NUM_BEAMS = 4
 MAX_NUM_TOKENS_GENERATE = 300
 NUM_BATCHES_OF_GENERATED_SENTENCES_TO_SAVE_TO_FILE = 100
 NUM_BATCHES_OF_GENERATED_REPORTS_TO_SAVE_TO_FILE = 100
+# torch.cuda.is_available = lambda : False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

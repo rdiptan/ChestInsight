@@ -11,7 +11,6 @@ from image_enhancement import clahe_image_enhance, canny_enhance, threshold_enha
 from src.full_model.generate_reports_for_images import mainz
 import cv2
 warnings.filterwarnings("ignore")
-
 def features():
     #  headings and tabs creation
     DicomAnonymizationTab, ImgAnnotationTab, ImgEnhancementTab, FinetuningTab, PredictionTab,  = st.tabs(["Dicom Image Explorer and Anonymizer", "Annonate Images and Generate Datasets",

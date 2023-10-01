@@ -52,6 +52,7 @@ from src.full_model.run_configurations import (
     WEIGHT_LANGUAGE_MODEL_LOSS,
 )
 from src.path_datasets_and_weights import path_full_dataset, path_runs_full_model
+# torch.cuda.is_available = lambda : False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

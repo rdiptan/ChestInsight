@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+device = 'cpu'
 
 class BinaryClassifierRegionSelection(nn.Module):
     def __init__(self):

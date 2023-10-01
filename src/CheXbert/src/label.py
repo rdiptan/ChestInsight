@@ -59,6 +59,7 @@ def label(model, csv_path):
     ld = load_unlabeled_data(csv_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = 'cpu'
 
     model.eval()
     y_pred = [[] for _ in range(len(CONDITIONS))]

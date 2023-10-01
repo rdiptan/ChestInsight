@@ -8,7 +8,8 @@ pip install -U spacy-transformers
 """
 
 from collections import defaultdict
-
+from src.full_model.custom_gradcam import GradCAM
+import matplotlib.pyplot as plt
 import albumentations as A
 import cv2
 import evaluate
@@ -16,9 +17,13 @@ import spacy
 import torch
 from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
+import numpy as np
 
 from src.full_model.report_generation_model import ReportGenerationModel
 from src.full_model.train_full_model import get_tokenizer
+# from monai.visualize.class_activation_maps import GradCAM
+
+torch.cuda.is_available = lambda : False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -139,7 +144,7 @@ def get_image_tensor(image_path):
             ToTensorV2(),
         ]
     )
-    print(type(image))
+    # print(type(image))
     transform = val_test_transforms(image=image)
     image_transformed = transform["image"]  # shape (1, 512, 512)
     image_transformed_batch = image_transformed.unsqueeze(0)  # shape (1, 1, 512, 512)
@@ -170,8 +175,13 @@ def get_model(checkpoint_path):
 def mainz(input_image:str):
     checkpoint_path = "./full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
     # checkpoint_path = "/Users/diptanregmi/Documents/Chest_Insight_Model/rgrg/full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
-    
+
     model = get_model(checkpoint_path)
+
+
+
+    cam = GradCAM(model.object_detector.backbone, '7.2.conv3')
+
 
     print("Model instantiated.")
 
@@ -192,9 +202,28 @@ def mainz(input_image:str):
     # if you encounter a spacy-related error, try upgrading spacy to version 3.5.3 and spacy-transformers to version 1.2.5
     # pip install -U spacy
     # pip install -U spacy-transformers
-
+# backbone.7.2.conv3
     for image_path in tqdm(images_paths):
         image_tensor = get_image_tensor(image_path)  # shape (1, 1, 512, 512)
+
+        # orig_shape = plt.imread(image_path).shape
+        # print(orig_shape)
+        # for name, _ in model.object_detector.backbone.named_modules(): print(name)
+        heatmap = cam(image_tensor)
+        heatmap = heatmap[0,0].numpy()
+
+        # heatmap = cv2.resize(heatmap, orig_shape)
+        # heatmap *= 255 # or any coeffheatmapcient
+        # heatmap = heatmap.astype(np.uint32)
+        # heatmap = cv2.equalizeHist(heatmap)
+        # heatmap = cv2.createCLAHE().apply(heatmap)
+        # print(heatmap.shape, heatmap.dtype, heatmap.max(), heatmap.min())
+        plt.imshow(image_tensor[0,0].cpu().numpy(), cmap = 'gray')
+        plt.imshow(heatmap, vmax = 0.000000000000000001, alpha = 0.3)
+        # plt.colorbar()
+        plt.savefig('heatmap.png')
+
+
         generated_report = get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer)
         generated_reports.append(generated_report)
 

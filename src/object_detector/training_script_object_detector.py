@@ -23,6 +23,7 @@ from src.dataset.constants import ANATOMICAL_REGIONS
 from src.object_detector.custom_image_dataset_object_detector import CustomImageDataset
 from src.object_detector.object_detector import ObjectDetector
 from src.path_datasets_and_weights import path_full_dataset, path_runs_object_detector
+# torch.cuda.is_available = lambda : False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
