@@ -11,7 +11,7 @@ from streamlit_option_menu import option_menu
 from streamlit_extras.colored_header import colored_header
 from image_annotation import run_cls, dataframe_annotation
 from dicom_viewer_and_annon import anonymize_dicom_file, dicom_viewer
-from image_enhancement import clahe_image_enhance, increase_brightness
+from image_enhancement import clahe_image_enhance, increase_brightness,gamma
 from src.full_model.generate_reports_for_images import main_model
 # ignore warnings
 warnings.filterwarnings("ignore")
@@ -72,7 +72,7 @@ def features():
             # asks user for an algorithm
             option = st.selectbox(
                 'Select an algorithm for image enhancement',
-                ('Contrast limited adaptive histogram equalization','Brightness', 'Histogram Equalization'), index=1)
+                ('Contrast limited adaptive histogram equalization','Brightness', 'Histogram Equalization','Gamma correction'), index=1)
             
             # create colums and displays original image on the left
             col_1, col_2 = st.columns(2)
@@ -106,6 +106,16 @@ def features():
                 if col_2.button('Save Enhanced Image'):
                     cv2.imwrite(f'{path}{image.name.split(".")[0]}_increase_brightness_enhanced.jpeg', increase_brightness(path + image.name))
                     st.success(f"Image with ssr saved!")
+
+            elif option == 'Gamma correction':
+                if col_1.button('Click to perform enhancement'):
+                    output_image = gamma(path + image.name)
+                    col_2.image(output_image, caption='Gamma Corrected Image')
+
+            if col_2.button('Save Enhanced Image'):
+                cv2.imwrite(f'{path}{image.name.split(".")[0]}_gamma_corrected.jpeg',
+                            gamma(path + image.name))
+                st.success(f"Image with Gamma Correction Enhancement saved!")
 
     # ImgAnnotationTab: Here is the entry point for image annotation
     with ImgAnnotationTab:

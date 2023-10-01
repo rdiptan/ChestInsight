@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import math
 from PIL import Image
 from matplotlib.pyplot import imshow, show, subplot, title, get_cmap, hist
 def clahe_image_enhance(input_image:str, mode='HE'):
@@ -71,3 +72,38 @@ def increase_brightness(input_image: str ,value):
     # Convert the HSV image back to BGR color space
     img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
     return img
+
+def gamma(input_image:str):
+    # dimensions of input images
+    image = cv2.imread(input_image)
+#first method
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hue, sat, val = cv2.split(hsv)
+
+    # compute gamma = log(mid*255)/log(mean)
+    mid = 0.5
+    mean = np.mean(val)
+    gamma = math.log(mid * 255) / math.log(mean)
+    #print(gamma)
+
+
+    # do gamma correction on value channel
+    val_gamma = np.power(val, gamma).clip(0, 255).astype(np.uint8)
+
+    # combine new value channel with original hue and sat channels
+    hsv_gamma = cv2.merge([hue, sat, val_gamma])
+    img_gamma1 = cv2.cvtColor(hsv_gamma, cv2.COLOR_HSV2BGR)
+#2nd method
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+
+    # compute gamma = log(mid*255)/log(mean)
+    mid = 0.5
+    mean = np.mean(gray)
+    gamma = math.log(mid * 255) / math.log(mean)
+    #print(gamma)
+
+    # do gamma correction
+    img_gamma2 = np.power(image, gamma).clip(0, 255).astype(np.uint8)
+
+    return img_gamma2
