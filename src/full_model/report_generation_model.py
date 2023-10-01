@@ -166,7 +166,7 @@ class ReportGenerationModel(nn.Module):
                 selected_regions,
                 predicted_abnormal_regions
             )
-
+    
     def get_valid_decoder_input_for_training(
         self,
         class_detected,  # shape [batch_size x 29]
@@ -274,3 +274,4 @@ class ReportGenerationModel(nn.Module):
         del selected_region_features
 
         return output_ids, selected_regions, detections, class_detected
+    

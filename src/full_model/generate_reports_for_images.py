@@ -144,7 +144,6 @@ def get_image_tensor(image_path):
             ToTensorV2(),
         ]
     )
-    # print(type(image))
     transform = val_test_transforms(image=image)
     image_transformed = transform["image"]  # shape (1, 512, 512)
     image_transformed_batch = image_transformed.unsqueeze(0)  # shape (1, 1, 512, 512)
@@ -172,7 +171,7 @@ def get_model(checkpoint_path):
     return model
 
 
-def mainz(input_image:str):
+def main_model(input_image:str):
     checkpoint_path = "./full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
     # checkpoint_path = "/Users/diptanregmi/Documents/Chest_Insight_Model/rgrg/full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
 
@@ -231,4 +230,4 @@ def mainz(input_image:str):
     return generated_reports
 
 if __name__ == "__main__":
-    mainz()
+    main_model()
