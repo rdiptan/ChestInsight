@@ -127,23 +127,7 @@ def features():
     with PredictionTab:
         # upload an image file
         uploaded_image = st.file_uploader('Upload file for Report Generation!')
-        
-        # converts and saves BGR (3 channel) images to grayscale
-        def coloured_to_gray_scale(input_image: str, path:str):
-            """  
-            Converts and saves BGR (3 channel) images to grayscale.
 
-            Args:
-                input_image (str): Path to the input image file.
-                path (str): Path to the directory where the grayscale image will be saved.
-
-            Returns:
-                bool: True if the grayscale image was successfully saved, False otherwise.
-            """
-            img = cv2.imread(input_image)
-            gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            return cv2.imwrite(f'{path}{input_image.split("/")[2].split(".")[0]}_gray_scaled.jpg', gray_image)
-       
         # define path 
         path = "./data/"
         col_1, col_2 = st.columns(2)   
@@ -152,10 +136,10 @@ def features():
         if uploaded_image:
             # displays original image on the left
             col_1.image(uploaded_image)
-            coloured_to_gray_scale(f"{path}{uploaded_image.name}", path)
+            # generate reports
             if col_1.button('Generate Report'):   
                 # uses model to generate and display report on the right
-                report = main_model(f"{path}{uploaded_image.name.split('.')[0]}_gray_scaled.jpg")
+                report = main_model(f"{path}{uploaded_image.name}")
                 col_2.write(report)
 
 

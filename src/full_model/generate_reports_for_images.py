@@ -126,6 +126,8 @@ def get_image_tensor(image_path):
     # cv2.imread by default loads an image with 3 channels
     # since we have grayscale images, we only have 1 channel and thus use cv2.IMREAD_UNCHANGED to read in the 1 channel
     image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # shape (3056, 2544)
+    # coverts image to gray scale
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     val_test_transforms = A.Compose(
         [
@@ -164,23 +166,22 @@ def main_model(input_image:str):
     cam = GradCAM(model.object_detector.backbone, '7.2.conv3')
     ####################################################################################
     print("Model instantiated.")
-    images_paths = [input_image]
+    image_path = input_image
     generated_reports = []
     bert_score = evaluate.load("bertscore")
     sentence_tokenizer = spacy.load("en_core_web_trf")
     tokenizer = get_tokenizer()
-    for image_path in tqdm(images_paths):
-        image_tensor = get_image_tensor(image_path)  # shape (1, 1, 512, 512)
-        ####################################Grad-CAM Map####################################
-        heatmap = cam(image_tensor)
-        heatmap = heatmap[0,0].numpy()
-        plt.imshow(image_tensor[0,0].cpu().numpy(), cmap = 'gray')
-        plt.imshow(heatmap, vmax = 0.000000000000000001, alpha = 0.3)
-        plt.savefig('heatmap.png')
-        ####################################################################################
-        generated_report = get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer)
-        generated_reports.append(generated_report)
-    return generated_reports
+    image_tensor = get_image_tensor(image_path)  # shape (1, 1, 512, 512)
+    ####################################Grad-CAM Map####################################
+    heatmap = cam(image_tensor)
+    heatmap = heatmap[0,0].numpy()
+    plt.imshow(image_tensor[0,0].cpu().numpy(), cmap = 'gray')
+    plt.imshow(heatmap, vmax = 0.000000000000000001, alpha = 0.3)
+    plt.savefig('heatmap.png')
+    ####################################################################################
+    generated_report = get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer)
+
+    return generated_report
 
 if __name__ == "__main__":
     main_model()
