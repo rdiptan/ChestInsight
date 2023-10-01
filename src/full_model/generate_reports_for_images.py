@@ -6,9 +6,8 @@ If you encounter any spacy-related errors, try upgrading spacy to version 3.5.3 
 pip install -U spacy
 pip install -U spacy-transformers
 """
-
 from collections import defaultdict
-
+import matplotlib.pyplot as plt
 import albumentations as A
 import cv2
 import evaluate
@@ -16,12 +15,13 @@ import spacy
 import torch
 from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
-
+import numpy as np
+from transformers import GPT2Tokenizer
 from src.full_model.report_generation_model import ReportGenerationModel
-from src.full_model.train_full_model import get_tokenizer
+from src.custom_gradcam import GradCAM
 
+torch.cuda.is_available = lambda : False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 BERTSCORE_SIMILARITY_THRESHOLD = 0.9
 IMAGE_INPUT_SIZE = 512
 MAX_NUM_TOKENS_GENERATE = 300
@@ -29,6 +29,11 @@ NUM_BEAMS = 4
 mean = 0.471  # see get_transforms in src/dataset/compute_mean_std_dataset.py
 std = 0.302
 
+def get_tokenizer():
+    checkpoint = "healx/gpt-2-pubmed-medium"
+    tokenizer = GPT2Tokenizer.from_pretrained(checkpoint)
+    tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
 
 def write_generated_reports_to_txt(images_paths, generated_reports, generated_reports_txt_path):
     with open(generated_reports_txt_path, "w") as f:
@@ -38,13 +43,11 @@ def write_generated_reports_to_txt(images_paths, generated_reports, generated_re
             f.write("=" * 30)
             f.write("\n\n")
 
-
 def remove_duplicate_generated_sentences(generated_report, bert_score, sentence_tokenizer):
     def check_gen_sent_in_sents_to_be_removed(gen_sent, similar_generated_sents_to_be_removed):
         for lists_of_gen_sents_to_be_removed in similar_generated_sents_to_be_removed.values():
             if gen_sent in lists_of_gen_sents_to_be_removed:
                 return True
-
         return False
 
     # since different (closely related) regions can have the same generated sentence, we first remove exact duplicates
@@ -65,7 +68,6 @@ def remove_duplicate_generated_sentences(generated_report, bert_score, sentence_
 
     # similar_generated_sents_to_be_removed maps from one sentence to a list of similar sentences that are to be removed
     similar_generated_sents_to_be_removed = defaultdict(list)
-
     for i in range(len(gen_sents)):
         gen_sent_1 = gen_sents[i]
 
@@ -87,22 +89,18 @@ def remove_duplicate_generated_sentences(generated_report, bert_score, sentence_
                     similar_generated_sents_to_be_removed[gen_sent_1].append(gen_sent_2)
                 else:
                     similar_generated_sents_to_be_removed[gen_sent_2].append(gen_sent_1)
-
     generated_report = " ".join(
         sent
         for sent in gen_sents
         if not check_gen_sent_in_sents_to_be_removed(sent, similar_generated_sents_to_be_removed)
     )
-
     return generated_report
-
 
 def convert_generated_sentences_to_report(generated_sents_for_selected_regions, bert_score, sentence_tokenizer):
     generated_report = " ".join(sent for sent in generated_sents_for_selected_regions)
 
     generated_report = remove_duplicate_generated_sentences(generated_report, bert_score, sentence_tokenizer)
     return generated_report
-
 
 def get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer):
     with torch.autocast(device_type="cuda", dtype=torch.float16):
@@ -118,13 +116,11 @@ def get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_to
     generated_sents_for_selected_regions = tokenizer.batch_decode(
         beam_search_output, skip_special_tokens=True, clean_up_tokenization_spaces=True
     )  # list[str]
-
     generated_report = convert_generated_sentences_to_report(
         generated_sents_for_selected_regions, bert_score, sentence_tokenizer
     )  # str
 
     return generated_report
-
 
 def get_image_tensor(image_path):
     # cv2.imread by default loads an image with 3 channels
@@ -145,13 +141,11 @@ def get_image_tensor(image_path):
 
     return image_transformed_batch
 
-
 def get_model(checkpoint_path):
     checkpoint = torch.load(
         checkpoint_path,
         map_location=torch.device("cpu"),
     )
-
     # if there is a key error when loading checkpoint, try uncommenting down below
     # since depending on the torch version, the state dicts may be different
     # checkpoint["model"]["object_detector.rpn.head.conv.weight"] = checkpoint["model"].pop("object_detector.rpn.head.conv.0.0.weight")
@@ -160,44 +154,32 @@ def get_model(checkpoint_path):
     model.load_state_dict(checkpoint["model"])
     model.to(device, non_blocking=True)
     model.eval()
-
     del checkpoint
-
     return model
-
 
 def main_model(input_image:str):
     checkpoint_path = "./full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
-    # checkpoint_path = "/Users/diptanregmi/Documents/Chest_Insight_Model/rgrg/full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
-    
     model = get_model(checkpoint_path)
-
+    ####################################Grad-CAM Map####################################
+    cam = GradCAM(model.object_detector.backbone, '7.2.conv3')
+    ####################################################################################
     print("Model instantiated.")
-
-    # paths to the images that we want to generate reports for
-    # images_paths = [
-    #     "./gray_image.jpg",
-    #     "./gray_image2.jpg",
-    # ]
     images_paths = [input_image]
-
-    # generated_reports_txt_path = "/Users/diptanregmi/Documents/ChestInsight/covid/report_test.txt"
     generated_reports = []
-
     bert_score = evaluate.load("bertscore")
     sentence_tokenizer = spacy.load("en_core_web_trf")
     tokenizer = get_tokenizer()
-
-    # if you encounter a spacy-related error, try upgrading spacy to version 3.5.3 and spacy-transformers to version 1.2.5
-    # pip install -U spacy
-    # pip install -U spacy-transformers
-
     for image_path in tqdm(images_paths):
         image_tensor = get_image_tensor(image_path)  # shape (1, 1, 512, 512)
+        ####################################Grad-CAM Map####################################
+        heatmap = cam(image_tensor)
+        heatmap = heatmap[0,0].numpy()
+        plt.imshow(image_tensor[0,0].cpu().numpy(), cmap = 'gray')
+        plt.imshow(heatmap, vmax = 0.000000000000000001, alpha = 0.3)
+        plt.savefig('heatmap.png')
+        ####################################################################################
         generated_report = get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer)
         generated_reports.append(generated_report)
-
-    # write_generated_reports_to_txt(images_paths, generated_reports, generated_reports_txt_path)
     return generated_reports
 
 if __name__ == "__main__":

@@ -15,7 +15,6 @@ from image_enhancement import clahe_image_enhance, increase_brightness
 from src.full_model.generate_reports_for_images import main_model
 # ignore warnings
 warnings.filterwarnings("ignore")
-
 def features():
     """
     Function to handle the different features of the application.
