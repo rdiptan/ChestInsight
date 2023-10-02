@@ -12,9 +12,20 @@ from streamlit_extras.colored_header import colored_header
 from image_annotation import run_cls, dataframe_annotation
 from dicom_viewer_and_annon import anonymize_dicom_file, dicom_viewer
 from image_enhancement import clahe_image_enhance, increase_brightness,gamma
-from src.full_model.generate_reports_for_images import main_model
+from src.full_model.generate_reports_for_images import main_model, get_image_tensor
 # ignore warnings
 warnings.filterwarnings("ignore")
+
+import io
+from PIL import Image 
+import matplotlib.pyplot as plt
+def fig2img(fig):
+    # Convert the Matplotlib figure to a PIL image
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    img = Image.open(buf)
+    return img
 
 def features():
     """
@@ -138,36 +149,35 @@ def features():
     with PredictionTab:
         # upload an image file
         uploaded_image = st.file_uploader('Upload file for Report Generation!')
-        
-        # converts and saves BGR (3 channel) images to grayscale
-        def coloured_to_gray_scale(input_image: str, path:str):
-            """  
-            Converts and saves BGR (3 channel) images to grayscale.
 
-            Args:
-                input_image (str): Path to the input image file.
-                path (str): Path to the directory where the grayscale image will be saved.
-
-            Returns:
-                bool: True if the grayscale image was successfully saved, False otherwise.
-            """
-            img = cv2.imread(input_image)
-            gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            return cv2.imwrite(f'{path}{input_image.split("/")[2].split(".")[0]}_gray_scaled.jpg', gray_image)
-       
         # define path 
         path = "./data/"
-        col_1, col_2 = st.columns(2)   
+        col_1, col_2, col_3 = st.columns(3)   
         
         # checks if file has been uploaded
         if uploaded_image:
             # displays original image on the left
             col_1.image(uploaded_image)
-            coloured_to_gray_scale(f"{path}{uploaded_image.name}", path)
+            # generate reports
             if col_1.button('Generate Report'):   
                 # uses model to generate and display report on the right
-                report = main_model(f"{path}{uploaded_image.name.split('.')[0]}_gray_scaled.jpg")
-                col_2.write(report)
+                report, heatmap = main_model(f"{path}{uploaded_image.name}")
+                # Create a figure and axes
+                fig, ax = plt.subplots()
+
+                # Display the grayscale image
+                ax.imshow(get_image_tensor(f"{path}{uploaded_image.name}")[0, 0].cpu().numpy(), cmap='gray')
+
+                # Overlay the heatmap on the image
+                ax.imshow(heatmap, vmax=0.000000000000000001, alpha=0.3)
+
+                # Remove the axis labels
+                ax.axis('off')
+
+                # Convert the figure to a PIL image
+                heatmap_image = fig2img(fig)
+                col_2.image(heatmap_image)
+                col_3.write(report)
 
 
 def main():

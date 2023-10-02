@@ -7,6 +7,7 @@ from torchinfo import summary
 from transformers import GPT2LMHeadModel
 from transformers import BeamSearchScorer
 
+torch.cuda.is_available = lambda : False
 
 class Conv1DWithTrainedWeights(nn.Module):
     """

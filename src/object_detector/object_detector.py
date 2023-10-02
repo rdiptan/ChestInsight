@@ -14,6 +14,7 @@ from src.object_detector.custom_roi_heads import CustomRoIHeads
 from src.object_detector.custom_rpn import CustomRegionProposalNetwork
 from src.object_detector.image_list import ImageList
 
+torch.cuda.is_available = lambda : False
 
 class ObjectDetector(nn.Module):
     """
