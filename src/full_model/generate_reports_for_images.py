@@ -167,7 +167,6 @@ def main_model(input_image:str):
     ####################################################################################
     print("Model instantiated.")
     image_path = input_image
-    generated_reports = []
     bert_score = evaluate.load("bertscore")
     sentence_tokenizer = spacy.load("en_core_web_trf")
     tokenizer = get_tokenizer()
@@ -175,13 +174,13 @@ def main_model(input_image:str):
     ####################################Grad-CAM Map####################################
     heatmap = cam(image_tensor)
     heatmap = heatmap[0,0].numpy()
-    plt.imshow(image_tensor[0,0].cpu().numpy(), cmap = 'gray')
-    plt.imshow(heatmap, vmax = 0.000000000000000001, alpha = 0.3)
-    plt.savefig('heatmap.png')
+    # plt.imshow(image_tensor[0,0].cpu().numpy(), cmap = 'gray')
+    # plt.imshow(heatmap, vmax = 0.000000000000000001, alpha = 0.3)
+    # plt.savefig('heatmap.png')
     ####################################################################################
     generated_report = get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer)
 
-    return generated_report
+    return generated_report, heatmap
 
 if __name__ == "__main__":
     main_model()
