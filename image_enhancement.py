@@ -3,6 +3,9 @@ import numpy as np
 import math
 from PIL import Image
 from matplotlib.pyplot import imshow, show, subplot, title, get_cmap, hist
+import torch
+import torchvision.transforms as transforms
+import monai.transforms as monai_transforms
 def clahe_image_enhance(input_image:str, mode='HE'):
     """
     Enhances the input image using Contrast Limited Adaptive Histogram Equalization (CLAHE).
@@ -107,3 +110,31 @@ def gamma(input_image:str):
     img_gamma2 = np.power(image, gamma).clip(0, 255).astype(np.uint8)
 
     return img_gamma2
+
+# Function to perform Super-Resolution
+def super_resolution(image_path, upscale_factor=4):
+    # Load the image
+    image = Image.open(image_path).convert("RGB")  # Convert to RGB
+    image = transforms.ToTensor()(image).unsqueeze(0)  # Convert to tensor and add batch dimension
+    
+    # Upscale the image using interpolation
+    super_res_image = torch.nn.functional.interpolate(image, scale_factor=upscale_factor, mode='bicubic', align_corners=False)
+
+    # Convert the enhanced image tensor back to a PIL image
+    enhanced_image_pil = transforms.ToPILImage()(super_res_image.squeeze(0))
+    return enhanced_image_pil
+
+# Function to perform Noise Reduction using Gaussian Smoothing
+def noise_reduction(image_path, sigma=1.0):
+    # Load the image
+    image = Image.open(image_path).convert("RGB")  # Convert to RGB
+    
+    # Convert the Pillow image to a NumPy array
+    image_array = np.array(image)
+    
+    # Apply Gaussian Smoothing to reduce noise
+    smoothed_image_array = monai_transforms.GaussianSmooth(sigma=sigma)(image_array)
+    
+    # Convert the smoothed NumPy array back to a Pillow image
+    smoothed_image_pil = Image.fromarray(smoothed_image_array.astype(np.uint8))
+    return smoothed_image_pil

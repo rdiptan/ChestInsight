@@ -11,7 +11,7 @@ from streamlit_option_menu import option_menu
 from streamlit_extras.colored_header import colored_header
 from image_annotation import run_cls, dataframe_annotation
 from dicom_viewer_and_annon import anonymize_dicom_file, dicom_viewer
-from image_enhancement import clahe_image_enhance, increase_brightness,gamma
+from image_enhancement import clahe_image_enhance, increase_brightness, gamma, super_resolution, noise_reduction
 from src.full_model.generate_reports_for_images import main_model, get_image_tensor
 # ignore warnings
 warnings.filterwarnings("ignore")
@@ -83,7 +83,8 @@ def features():
             # asks user for an algorithm
             option = st.selectbox(
                 'Select an algorithm for image enhancement',
-                ('Contrast limited adaptive histogram equalization','Brightness', 'Histogram Equalization','Gamma correction'), index=1)
+                ('Contrast limited adaptive histogram equalization','Brightness', 'Histogram Equalization',
+                 'Gamma correction','Super Resolution','Smoothing'), index=1)
             
             # create colums and displays original image on the left
             col_1, col_2 = st.columns(2)
@@ -122,12 +123,29 @@ def features():
                 if col_1.button('Click to perform enhancement'):
                     output_image = gamma(path + image.name)
                     col_2.image(output_image, caption='Gamma Corrected Image')
+                    if col_2.button('Save Enhanced Image'):
+                        cv2.imwrite(f'{path}{image.name.split(".")[0]}_gamma_corrected.jpeg',
+                                    gamma(path + image.name))
+                        st.success(f"Image with Gamma Correction Enhancement saved!")
 
-            if col_2.button('Save Enhanced Image'):
-                cv2.imwrite(f'{path}{image.name.split(".")[0]}_gamma_corrected.jpeg',
-                            gamma(path + image.name))
-                st.success(f"Image with Gamma Correction Enhancement saved!")
-
+            elif option == 'Super Resolution':
+                if col_1.button('Click to perform enhancement'):
+                    output_image = super_resolution(path + image.name, upscale_factor=4)
+                    col_2.image(output_image, caption='Super Resolved Image')
+                    if col_2.button('Save Enhanced Image'):
+                        cv2.imwrite(f'{path}{image.name.split(".")[0]}_super_resolved.jpeg',
+                                    super_resolution(path + image.name, upscale_factor=4))
+                        st.success(f"Image with Super Resolution saved!")
+            
+            elif option == 'Smoothing':
+                if col_1.button('Click to perform enhancement'):
+                    output_image = noise_reduction(path + image.name, sigma=1.2)
+                    col_2.image(output_image, caption='Noise-Reduced Image')
+                    if col_2.button('Save Enhanced Image'):
+                        cv2.imwrite(f'{path}{image.name.split(".")[0]}_noise-reduced.jpeg',
+                                    noise_reduction(path + image.name, sigma=1.2))
+                        st.success(f"Image with Super Resolution saved!")    
+    
     # ImgAnnotationTab: Here is the entry point for image annotation
     with ImgAnnotationTab:
         # define labels
