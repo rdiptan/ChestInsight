@@ -127,7 +127,9 @@ def get_image_tensor(image_path):
     # since we have grayscale images, we only have 1 channel and thus use cv2.IMREAD_UNCHANGED to read in the 1 channel
     image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # shape (3056, 2544)
     # coverts image to gray scale
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if len(image.shape) == 3 and image.shape[2] == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     val_test_transforms = A.Compose(
         [
