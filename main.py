@@ -1,11 +1,16 @@
+import io 
 import cv2
 import json
 import textwrap
 import warnings
 import numpy as np
 import pandas as pd
+from PIL import Image
 import streamlit as st
 from utils import docs
+import matplotlib.cm as cm
+from tensorflow import keras
+import matplotlib.pyplot as plt
 st.set_page_config(layout="wide")
 from streamlit_option_menu import option_menu   
 from streamlit_extras.colored_header import colored_header
@@ -16,16 +21,32 @@ from src.full_model.generate_reports_for_images import main_model, get_image_ten
 # ignore warnings
 warnings.filterwarnings("ignore")
 
-import io
-from PIL import Image 
-import matplotlib.pyplot as plt
-def fig2img(fig):
-    # Convert the Matplotlib figure to a PIL image
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png')
-    buf.seek(0)
-    img = Image.open(buf)
-    return img
+# helper functions
+def save_and_display_gradcam(img_path, heatmap, alpha=0.4):
+    # Load the original image
+    img = keras.preprocessing.image.load_img(img_path)
+    img = keras.preprocessing.image.img_to_array(img)
+
+    # Rescale heatmap to a range 0-255
+    heatmap = np.uint8(255 * heatmap)
+
+    # Use jet colormap to colorize heatmap
+    jet = cm.get_cmap("jet")
+
+    # Use RGB values of the colormap
+    jet_colors = jet(np.arange(256))[:, :3]
+    jet_heatmap = jet_colors[heatmap]
+
+    # Create an image with RGB colorized heatmap
+    jet_heatmap = keras.preprocessing.image.array_to_img(jet_heatmap)
+    jet_heatmap = jet_heatmap.resize((img.shape[1], img.shape[0]))
+    jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
+
+    # Superimpose the heatmap on original image
+    superimposed_img = jet_heatmap * alpha + img
+    superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img)
+
+    return superimposed_img
 
 def features():
     """
@@ -180,21 +201,8 @@ def features():
             if col_1.button('Generate Report'):   
                 # uses model to generate and display report on the right
                 report, heatmap = main_model(f"{path}{uploaded_image.name}")
-                # Create a figure and axes
-                fig, ax = plt.subplots()
-
-                # Display the grayscale image
-                ax.imshow(get_image_tensor(f"{path}{uploaded_image.name}")[0, 0].cpu().numpy(), cmap='gray')
-
-                # Overlay the heatmap on the image
-                ax.imshow(heatmap, vmax=0.000000000000000001, alpha=0.3)
-
-                # Remove the axis labels
-                ax.axis('off')
-
-                # Convert the figure to a PIL image
-                heatmap_image = fig2img(fig)
-                col_2.image(heatmap_image)
+                grad_cam_img = save_and_display_gradcam(f"{path}{uploaded_image.name}", heatmap)
+                col_2.image(grad_cam_img)
                 col_3.write(report)
 
 
