@@ -33,10 +33,10 @@ Using the sidebar, navigate to ```Try out```, the following page gives you acces
 Contributions are welcome! Please feel free to submit a pull request.
 
 ### Contributors
-- [Muhammad Kabir Hamzah] (https://github.com/Marshall-mk)
-- [Beyza Zayim] (https://github.com/beyza17)
-- [Muhammad Alberb] (https://github.com/Muhammad-Al-Barbary)
-- [Diptan Regmi] (https://github.com/rdiptan)
-- [Faisal Farhan] (https://github.com/f-farhan)
-- [Aya Ahmed Faeek Elgebaly] (https://github.com/AYAELGEBALY)
+- [Muhammad Kabir Hamzah](https://github.com/Marshall-mk)
+- [Beyza Zayim](https://github.com/beyza17)
+- [Muhammad Alberb](https://github.com/Muhammad-Al-Barbary)
+- [Diptan Regmi](https://github.com/rdiptan)
+- [Faisal Farhan](https://github.com/f-farhan)
+- [Aya Ahmed Faeek Elgebaly](https://github.com/AYAELGEBALY)
 
