@@ -1,7 +1,8 @@
 # ChestInsight
 ### Smart Chest Xray Analysis and Report Generation
 
-This project aims to provide a smart solution for chest x-ray analysis and report generation. The project is divided into series of steps including dicom image anonymization, image annotation, image enhancement and report generation. The report generation part includes natural language processing and deep learning techniques adopted from [rgrg](https://github.com/ttanida/rgrg).
+Welcome to ChestInsight repository. ChestInsight is an open-source software project developed to provide a smart solution for chest x-ray analysis and report generation. 
+ChestInsight has features like dicom image anonymization, image annotation, image enhancement and report generation. The report generation part includes natural language processing and deep learning techniques adopted from [rgrg](https://github.com/ttanida/rgrg).
 
 ### Installation
 Clone the repository:
@@ -31,6 +32,11 @@ Using the sidebar, navigate to ```Try out```, the following page gives you acces
 
 Contributions are welcome! Please feel free to submit a pull request.
 
-### License
+### Contributors
+- [Muhammad Kabir Hamzah] (https://github.com/Marshall-mk)
+- [Beyza Zayim] (https://github.com/beyza17)
+- [Muhammad Alberb] (https://github.com/Muhammad-Al-Barbary)
+- [Diptan Regmi] (https://github.com/rdiptan)
+- [Faisal Farhan] (https://github.com/f-farhan)
+- [Aya Ahmed Faeek Elgebaly] (https://github.com/AYAELGEBALY)
 
-This project is licensed under the MIT License - see the LICENSE file for details.
