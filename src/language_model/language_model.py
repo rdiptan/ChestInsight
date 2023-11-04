@@ -7,7 +7,8 @@ from torchinfo import summary
 from transformers import GPT2LMHeadModel
 from transformers import BeamSearchScorer
 
-torch.cuda.is_available = lambda : False
+torch.cuda.is_available = lambda: False
+
 
 class Conv1DWithTrainedWeights(nn.Module):
     """
@@ -20,8 +21,12 @@ class Conv1DWithTrainedWeights(nn.Module):
 
     def __init__(self, trained_weight, trained_bias):
         super(Conv1DWithTrainedWeights, self).__init__()
-        self.weight = nn.Parameter(trained_weight, requires_grad=False)  # of shape [hidden_dim x 3*hidden_dim] for c_attn, of shape [hidden_dim x hidden_dim] for c_proj
-        self.bias = nn.Parameter(trained_bias, requires_grad=False)  # of shape [3 * hidden_dim] for c_attn, of shape [hidden_dim] for c_proj
+        self.weight = nn.Parameter(
+            trained_weight, requires_grad=False
+        )  # of shape [hidden_dim x 3*hidden_dim] for c_attn, of shape [hidden_dim x hidden_dim] for c_proj
+        self.bias = nn.Parameter(
+            trained_bias, requires_grad=False
+        )  # of shape [3 * hidden_dim] for c_attn, of shape [hidden_dim] for c_proj
 
     def forward(self, x):  # x has shape [batch x sequence_len x hidden_dim]
         size_out = x.size()[:-1] + (self.weight.size(-1),)
@@ -36,7 +41,6 @@ class GPT2PseudoAttention(nn.Module):
         c_attn_weights_and_bias,  # pre-trained weights and bias for retrieving query, key, value matrices
         c_proj_weights_and_bias,  # pre-trained weights and bias for projecting concatenated heads to original hidden dim
     ):
-
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -62,10 +66,15 @@ class GPT2PseudoAttention(nn.Module):
 
         # create a causal mask for masking out attention weights in the masked self-attention operator (masking out weights of tokens that lie ahead of the attended token)
         # first create a lower triangular matrix
-        lower_triangular_matrix = torch.tril(torch.ones((max_positions, max_positions), dtype=torch.uint8))
+        lower_triangular_matrix = torch.tril(
+            torch.ones((max_positions, max_positions), dtype=torch.uint8)
+        )
         # then save lower_triangular_matrix (with additional dimensions for batch_size and num_heads) in a buffer
         # (to make sure the causal mask does not get updated during backprop)
-        self.register_buffer("causal_mask", lower_triangular_matrix.view(1, 1, max_positions, max_positions))
+        self.register_buffer(
+            "causal_mask",
+            lower_triangular_matrix.view(1, 1, max_positions, max_positions),
+        )
 
         # value for masking out attention weights
         self.register_buffer("mask_out_value", torch.tensor(-1e4))
@@ -83,7 +92,9 @@ class GPT2PseudoAttention(nn.Module):
         return tensor.permute(0, 2, 1, 3)  # (batch_size, num_heads, seq_len, head_dim)
 
     def _attn(self, query_word, key_image_word, value_image_word, attention_mask):
-        attn_weights = torch.matmul(query_word, key_image_word.transpose(-1, -2))  # shape [batch_size x num_heads x seq_len x 1+seq_len]
+        attn_weights = torch.matmul(
+            query_word, key_image_word.transpose(-1, -2)
+        )  # shape [batch_size x num_heads x seq_len x 1+seq_len]
 
         # scale attention weights
         attn_weights = attn_weights / (value_image_word.size(-1) ** 0.5)
@@ -94,10 +105,14 @@ class GPT2PseudoAttention(nn.Module):
         # note that this causal mask has a shape of seq_len x 1+seq_len (in the last 2 dims),
         # with the first column of the mask only consisting of True boolean values
         # meaning attention weights corresponding to images (which are stored in the first column) are not masked out!
-        causal_mask = self.causal_mask[:, :, key_length - query_length: key_length, :key_length].to(torch.bool)
+        causal_mask = self.causal_mask[
+            :, :, key_length - query_length : key_length, :key_length
+        ].to(torch.bool)
 
         # select the attention weights where the causal mask has True values, select -1e4 where the causal mask has False values
-        attn_weights = torch.where(causal_mask, attn_weights, self.mask_out_value.to(attn_weights.dtype))
+        attn_weights = torch.where(
+            causal_mask, attn_weights, self.mask_out_value.to(attn_weights.dtype)
+        )
 
         # apply the attention mask of shape [batch_size, 1, 1, 1+seq_len] for masking out padding tokens
         # there is an additional column of zeros for the attention weights corresponding to the image,
@@ -110,7 +125,9 @@ class GPT2PseudoAttention(nn.Module):
         attn_weights = attn_weights.type(value_image_word.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
-        attn_output = torch.matmul(attn_weights, value_image_word)  # shape [batch_size x num_heads x seq_len x head_dim]
+        attn_output = torch.matmul(
+            attn_weights, value_image_word
+        )  # shape [batch_size x num_heads x seq_len x head_dim]
 
         return attn_output
 
@@ -122,24 +139,33 @@ class GPT2PseudoAttention(nn.Module):
         new_shape = tensor.size()[:-2] + (num_heads * head_dim,)
         return tensor.view(new_shape)
 
-    def forward(self,
-                word_hidden_states,  # shape [batch_size x seq_len x hidden_dim]
-                image_hidden_states,  # shape [batch_size x hidden_dim]
-                attention_mask,  # shape [batch_size, 1, 1, 1+seq_len]
-                layer_past,
-                use_cache):
-
+    def forward(
+        self,
+        word_hidden_states,  # shape [batch_size x seq_len x hidden_dim]
+        image_hidden_states,  # shape [batch_size x hidden_dim]
+        attention_mask,  # shape [batch_size, 1, 1, 1+seq_len]
+        layer_past,
+        use_cache,
+    ):
         # query, key, value matrices each have shape [batch_size x seq_len x hidden_dim]
-        q_word, k_word, v_word = self.c_attn(word_hidden_states).split(self.split_size, dim=2)
+        q_word, k_word, v_word = self.c_attn(word_hidden_states).split(
+            self.split_size, dim=2
+        )
 
         # if layer_past is None, we are either training the model or generating the first token in text generation mode
         if layer_past is None:
             # add an addition dimension to the image_hidden_states
-            image_hidden_states = image_hidden_states[:, None, :]  # shape [batch_size x 1 x hidden_dim]
+            image_hidden_states = image_hidden_states[
+                :, None, :
+            ]  # shape [batch_size x 1 x hidden_dim]
 
             # get the key and value matrices for the image hidden states
-            k_image = self.uk(image_hidden_states)  # shape [batch_size x 1 x hidden_dim]
-            v_image = self.uv(image_hidden_states)  # shape [batch_size x 1 x hidden_dim]
+            k_image = self.uk(
+                image_hidden_states
+            )  # shape [batch_size x 1 x hidden_dim]
+            v_image = self.uv(
+                image_hidden_states
+            )  # shape [batch_size x 1 x hidden_dim]
 
             # if the batch_size is different, then we are in beam search generation mode (adjust k and v image matrices accordingly)
             if k_image.size(0) != k_word.size(0):
@@ -147,24 +173,42 @@ class GPT2PseudoAttention(nn.Module):
                 k_image = k_image.repeat_interleave(num_beams, dim=0)
                 v_image = v_image.repeat_interleave(num_beams, dim=0)
 
-            k_image_word = torch.cat((k_image, k_word), dim=1)  # shape [batch_size x 1+seq_len x hidden_dim]
-            v_image_word = torch.cat((v_image, v_word), dim=1)  # shape [batch_size x 1+seq_len x hidden_dim]
+            k_image_word = torch.cat(
+                (k_image, k_word), dim=1
+            )  # shape [batch_size x 1+seq_len x hidden_dim]
+            v_image_word = torch.cat(
+                (v_image, v_word), dim=1
+            )  # shape [batch_size x 1+seq_len x hidden_dim]
 
-            q_word = self._split_heads(q_word, self.num_heads, self.head_dim)  # shape [batch_size x num_heads x seq_len x head_dim]
-            k_image_word = self._split_heads(k_image_word, self.num_heads, self.head_dim)  # shape [batch_size x num_heads x 1+seq_len x head_dim]
-            v_image_word = self._split_heads(v_image_word, self.num_heads, self.head_dim)  # shape [batch_size x num_heads x 1+seq_len x head_dim]
+            q_word = self._split_heads(
+                q_word, self.num_heads, self.head_dim
+            )  # shape [batch_size x num_heads x seq_len x head_dim]
+            k_image_word = self._split_heads(
+                k_image_word, self.num_heads, self.head_dim
+            )  # shape [batch_size x num_heads x 1+seq_len x head_dim]
+            v_image_word = self._split_heads(
+                v_image_word, self.num_heads, self.head_dim
+            )  # shape [batch_size x num_heads x 1+seq_len x head_dim]
 
             if use_cache is True:
                 present = (k_image_word, v_image_word)
             else:
                 present = None
 
-            attn_output = self._attn(q_word, k_image_word, v_image_word, attention_mask)  # shape [batch_size x num_heads x seq_len x head_dim]
+            attn_output = self._attn(
+                q_word, k_image_word, v_image_word, attention_mask
+            )  # shape [batch_size x num_heads x seq_len x head_dim]
         else:
             # if there is a layer_past (which stores key and value tensors of past tokens), then this means we are in text generation mode
-            q_word = self._split_heads(q_word, self.num_heads, self.head_dim)  # shape [batch_size x num_heads x 1 x head_dim]
-            k_word = self._split_heads(k_word, self.num_heads, self.head_dim)  # shape [batch_size x num_heads x 1 x head_dim]
-            v_word = self._split_heads(v_word, self.num_heads, self.head_dim)  # shape [batch_size x num_heads x 1 x head_dim]
+            q_word = self._split_heads(
+                q_word, self.num_heads, self.head_dim
+            )  # shape [batch_size x num_heads x 1 x head_dim]
+            k_word = self._split_heads(
+                k_word, self.num_heads, self.head_dim
+            )  # shape [batch_size x num_heads x 1 x head_dim]
+            v_word = self._split_heads(
+                v_word, self.num_heads, self.head_dim
+            )  # shape [batch_size x num_heads x 1 x head_dim]
 
             past_key, past_value = layer_past
             k = torch.cat((past_key, k_word), dim=-2)
@@ -172,11 +216,17 @@ class GPT2PseudoAttention(nn.Module):
 
             present = (k, v)
 
-            attn_output = self._attn(q_word, k, v, attention_mask)  # shape [batch_size x num_heads x seq_len x head_dim]
+            attn_output = self._attn(
+                q_word, k, v, attention_mask
+            )  # shape [batch_size x num_heads x seq_len x head_dim]
 
-        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)  # shape [batch_size x seq_len x hidden_dim]
+        attn_output = self._merge_heads(
+            attn_output, self.num_heads, self.head_dim
+        )  # shape [batch_size x seq_len x hidden_dim]
         attn_output = self.c_proj(attn_output)
-        attn_output = self.resid_dropout(attn_output)  # shape [batch_size x seq_len x hidden_dim]
+        attn_output = self.resid_dropout(
+            attn_output
+        )  # shape [batch_size x seq_len x hidden_dim]
 
         return attn_output, present
 
@@ -225,13 +275,15 @@ class LanguageModel(nn.Module):
         self.final_layernorm = gpt_children[4]
 
         # convert each individual gpt2_block into a nn.ModuleList
-        self.gpt2_blocks = nn.ModuleList(nn.ModuleList(gpt2_block.children()) for gpt2_block in self.gpt2_blocks)
+        self.gpt2_blocks = nn.ModuleList(
+            nn.ModuleList(gpt2_block.children()) for gpt2_block in self.gpt2_blocks
+        )
 
         # small neural network to transform embeddings coming from the image feature space into embeddings in the text feature space
         self.feature_space_transformation_nn = nn.Sequential(
             nn.Linear(in_features=1024, out_features=1024),
             nn.ReLU(),
-            nn.Linear(in_features=1024, out_features=1024)
+            nn.Linear(in_features=1024, out_features=1024),
         )
 
     def _replace_attention_by_pseudo_attention(self):
@@ -256,15 +308,16 @@ class LanguageModel(nn.Module):
         for i, GPT2PSA in enumerate(GPT2PSA_list):
             self.gpt_with_lm_head.transformer.h[i].attn = GPT2PSA
 
-    def forward(self,
-                input_ids: torch.LongTensor,  # shape [batch_size x seq_len]
-                attention_mask: torch.FloatTensor,  # shape [batch_size x seq_len]
-                image_hidden_states: torch.FloatTensor,  # shape [batch_size x image_hidden_dim] (with image_hidden_dim = 1024)
-                return_loss: bool = False,
-                past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
-                position_ids: Optional[torch.LongTensor] = None,
-                use_cache: Optional[bool] = False
-                ):
+    def forward(
+        self,
+        input_ids: torch.LongTensor,  # shape [batch_size x seq_len]
+        attention_mask: torch.FloatTensor,  # shape [batch_size x seq_len]
+        image_hidden_states: torch.FloatTensor,  # shape [batch_size x image_hidden_dim] (with image_hidden_dim = 1024)
+        return_loss: bool = False,
+        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = False,
+    ):
         """
         If return_loss is True, returns the language modeling loss.
         If return_loss is False (in which we are in text generation mode and use_cache will be True), returns the language modeling logits (of shape batch_size x seq_len x vocab_size)
@@ -279,10 +332,14 @@ class LanguageModel(nn.Module):
         such that the language modeling logits align with the labels that they are trying to predict.
         """
         # get a boolean copy of the attention_mask and invert it
-        mask_to_ignore_padding_tokens_for_loss_computation = ~(attention_mask.to(torch.bool))
+        mask_to_ignore_padding_tokens_for_loss_computation = ~(
+            attention_mask.to(torch.bool)
+        )
 
         # transform image_hidden_states from image feature space to text feature space
-        image_hidden_states = self.feature_space_transformation_nn(image_hidden_states)  # shape [batch_size x word_hidden_dim], with word_hidden_dim = 1024
+        image_hidden_states = self.feature_space_transformation_nn(
+            image_hidden_states
+        )  # shape [batch_size x word_hidden_dim], with word_hidden_dim = 1024
 
         input_shape = input_ids.size()
         input_ids = input_ids.view(-1, input_shape[-1])
@@ -301,14 +358,23 @@ class LanguageModel(nn.Module):
         else:
             past_length = past_key_values[0][0].size(-2)
         if position_ids is None:
-            position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=self.device)
-            position_ids = position_ids.unsqueeze(0).view(-1, input_shape[-1])  # shape [1 x seq_len]
+            position_ids = torch.arange(
+                past_length,
+                input_shape[-1] + past_length,
+                dtype=torch.long,
+                device=self.device,
+            )
+            position_ids = position_ids.unsqueeze(0).view(
+                -1, input_shape[-1]
+            )  # shape [1 x seq_len]
 
         # pass the position ids through the positional embedding layer to get the positional embeddings
         position_embeds = self.wte(position_ids)  # shape [1 x seq_len x hidden_dim]
 
         # addition is broadcasted around batch_size dimension
-        word_hidden_states = inputs_embeds + position_embeds  # shape [batch_size x seq_len x hidden_dim]
+        word_hidden_states = (
+            inputs_embeds + position_embeds
+        )  # shape [batch_size x seq_len x hidden_dim]
 
         word_hidden_states = self.drop(word_hidden_states)
 
@@ -323,15 +389,21 @@ class LanguageModel(nn.Module):
         # of the image hidden states (see forward method of GPT2PseudoAttention), we have to shift the attention mask "one to the right" and add a column of ones
         # to the left such that the attention weights corresponding to the image are not masked out
         attention_mask_size = attention_mask.size()
-        ones_column = torch.ones(attention_mask_size[:-1] + (1,), dtype=torch.int64, device=self.device)  # shape [batch_size, 1, 1, 1]
-        attention_mask = torch.cat((ones_column, attention_mask), dim=-1)  # shape [batch_size, 1, 1, 1+seq_len]
+        ones_column = torch.ones(
+            attention_mask_size[:-1] + (1,), dtype=torch.int64, device=self.device
+        )  # shape [batch_size, 1, 1, 1]
+        attention_mask = torch.cat(
+            (ones_column, attention_mask), dim=-1
+        )  # shape [batch_size, 1, 1, 1+seq_len]
 
         # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
         # masked positions, this operation will create a tensor which is 0.0 for
         # positions we want to attend and -10000.0 for masked positions.
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely
-        attention_mask = attention_mask.to(dtype=next(self.parameters()).dtype)  # dtype should be either torch.float32 or torch.float16
+        attention_mask = attention_mask.to(
+            dtype=next(self.parameters()).dtype
+        )  # dtype should be either torch.float32 or torch.float16
         attention_mask = (1.0 - attention_mask) * -10000.0
 
         presents = () if use_cache else None
@@ -345,7 +417,13 @@ class LanguageModel(nn.Module):
             residual = word_hidden_states
             word_hidden_states = layer_norm_1(word_hidden_states)
 
-            word_hidden_states, present = pseudo_self_attention(word_hidden_states, image_hidden_states, attention_mask, layer_past, use_cache)
+            word_hidden_states, present = pseudo_self_attention(
+                word_hidden_states,
+                image_hidden_states,
+                attention_mask,
+                layer_past,
+                use_cache,
+            )
 
             # residual connection
             word_hidden_states = word_hidden_states + residual
@@ -364,7 +442,9 @@ class LanguageModel(nn.Module):
 
         word_hidden_states = word_hidden_states.view(output_shape)
 
-        lm_logits = self.lm_head(word_hidden_states)  # shape [batch_size x seq_len x vocab_size], with vocab_size = 50257
+        lm_logits = self.lm_head(
+            word_hidden_states
+        )  # shape [batch_size x seq_len x vocab_size], with vocab_size = 50257
 
         if return_loss:
             # use input_ids as ground_truth labels
@@ -381,13 +461,17 @@ class LanguageModel(nn.Module):
             # since the previous token should predict the next token
 
             # discard the last lm_logit corresponding to the last token
-            shift_logits = lm_logits[:, :-1, :].contiguous()  # shape [batch_size x seq_len-1 x vocab_size]
+            shift_logits = lm_logits[
+                :, :-1, :
+            ].contiguous()  # shape [batch_size x seq_len-1 x vocab_size]
 
             # discard the first token in the sequence
             shift_labels = labels[:, 1:].contiguous()  # shape [batch_size x seq_len-1]
 
             # flatten the tokens
-            shift_logits = shift_logits.view(-1, shift_logits.size(-1))  # shape [batch_size*seq_len-1 x vocab_size]
+            shift_logits = shift_logits.view(
+                -1, shift_logits.size(-1)
+            )  # shape [batch_size*seq_len-1 x vocab_size]
             shift_labels = shift_labels.view(-1)  # shape [batch_size * seq_len-1]
 
             # padding tokens are ignored for loss computation, and loss is averaged over non-ignored targets
@@ -400,15 +484,16 @@ class LanguageModel(nn.Module):
             return lm_logits, presents
 
     @torch.no_grad()
-    def generate(self,
-                 image_hidden_states: torch.FloatTensor,  # shape [batch_size x image_hidden_dim]
-                 max_length: int = None,
-                 num_beams: int = 1,
-                 num_beam_groups: int = 1,
-                 do_sample: bool = False,
-                 num_return_sequences: int = 1,
-                 early_stopping: bool = False
-                 ) -> torch.LongTensor:  # shape [batch_size x longest_generated_sequence_length]
+    def generate(
+        self,
+        image_hidden_states: torch.FloatTensor,  # shape [batch_size x image_hidden_dim]
+        max_length: int = None,
+        num_beams: int = 1,
+        num_beam_groups: int = 1,
+        do_sample: bool = False,
+        num_return_sequences: int = 1,
+        early_stopping: bool = False,
+    ) -> torch.LongTensor:  # shape [batch_size x longest_generated_sequence_length]
         """
         Generates output ids for a batch of image features.
         These output ids can then be decoded by the tokenizer to get the generated sentences.
@@ -416,18 +501,37 @@ class LanguageModel(nn.Module):
         batch_size = image_hidden_states.size(0)
 
         # start with the bos_token_id for all image features in the batch.
-        input_ids = torch.full(size=(batch_size, 1), fill_value=self.bos_token_id, dtype=torch.int64, device=self.device)
-        model_kwargs = {"attention_mask": torch.ones(size=(batch_size, 1), dtype=torch.int64, device=self.device),
-                        "use_cache": True}
+        input_ids = torch.full(
+            size=(batch_size, 1),
+            fill_value=self.bos_token_id,
+            dtype=torch.int64,
+            device=self.device,
+        )
+        model_kwargs = {
+            "attention_mask": torch.ones(
+                size=(batch_size, 1), dtype=torch.int64, device=self.device
+            ),
+            "use_cache": True,
+        }
 
-        is_greedy_gen_mode = (num_beams == 1) and (num_beam_groups == 1) and do_sample is False
-        is_sample_gen_mode = (num_beams == 1) and (num_beam_groups == 1) and do_sample is True
-        is_beam_gen_mode = (num_beams > 1) and (num_beam_groups == 1) and do_sample is False
-        is_beam_sample_gen_mode = (num_beams > 1) and (num_beam_groups == 1) and do_sample is True
+        is_greedy_gen_mode = (
+            (num_beams == 1) and (num_beam_groups == 1) and do_sample is False
+        )
+        is_sample_gen_mode = (
+            (num_beams == 1) and (num_beam_groups == 1) and do_sample is True
+        )
+        is_beam_gen_mode = (
+            (num_beams > 1) and (num_beam_groups == 1) and do_sample is False
+        )
+        is_beam_sample_gen_mode = (
+            (num_beams > 1) and (num_beam_groups == 1) and do_sample is True
+        )
         is_group_beam_gen_mode = (num_beams > 1) and (num_beam_groups > 1)
 
         if num_beam_groups > num_beams:
-            raise ValueError("'num_beam_groups' has to be smaller or equal to 'num_beams'")
+            raise ValueError(
+                "'num_beam_groups' has to be smaller or equal to 'num_beams'"
+            )
         if is_group_beam_gen_mode and do_sample is True:
             raise ValueError(
                 "Diverse beam search cannot be used in sampling mode. Make sure that 'do_sample' is set to 'False'."
@@ -441,16 +545,15 @@ class LanguageModel(nn.Module):
                 )
 
             return self.greedy_search(
-                input_ids,
-                image_hidden_states,
-                max_length,
-                **model_kwargs
+                input_ids, image_hidden_states, max_length, **model_kwargs
             )
         elif is_sample_gen_mode:
             raise NotImplementedError("Multinomial sampling is not implemented.")
         elif is_beam_gen_mode:
             if num_return_sequences > num_beams:
-                raise ValueError("'num_return_sequences' has to be smaller or equal to 'num_beams'.")
+                raise ValueError(
+                    "'num_return_sequences' has to be smaller or equal to 'num_beams'."
+                )
 
             if max_length is None:
                 raise ValueError("max_length has to be set for beam generation.")
@@ -465,7 +568,9 @@ class LanguageModel(nn.Module):
             )
 
             # interleave input_ids with 'num_beams' additional sequences per batch
-            input_ids, model_kwargs = self._expand_inputs_for_generation(input_ids, expand_size=num_beams, **model_kwargs)
+            input_ids, model_kwargs = self._expand_inputs_for_generation(
+                input_ids, expand_size=num_beams, **model_kwargs
+            )
 
             return self.beam_search(
                 input_ids,
@@ -475,24 +580,39 @@ class LanguageModel(nn.Module):
                 **model_kwargs,
             )
         elif is_beam_sample_gen_mode:
-            raise NotImplementedError("Beam-search multinomial sampling is not implemented.")
+            raise NotImplementedError(
+                "Beam-search multinomial sampling is not implemented."
+            )
         elif is_group_beam_gen_mode:
-            raise NotImplementedError("Diverse beam-search decoding is not implemented.")
+            raise NotImplementedError(
+                "Diverse beam-search decoding is not implemented."
+            )
 
-    def _expand_inputs_for_generation(self, input_ids, expand_size, attention_mask, **model_kwargs):
+    def _expand_inputs_for_generation(
+        self, input_ids, expand_size, attention_mask, **model_kwargs
+    ):
         expanded_return_idx = (
-            torch.arange(input_ids.shape[0]).view(-1, 1).repeat(1, expand_size).view(-1).to(input_ids.device)
+            torch.arange(input_ids.shape[0])
+            .view(-1, 1)
+            .repeat(1, expand_size)
+            .view(-1)
+            .to(input_ids.device)
         )
         input_ids = input_ids.index_select(0, expanded_return_idx)
 
         if attention_mask is not None:
-            model_kwargs["attention_mask"] = attention_mask.index_select(0, expanded_return_idx)
+            model_kwargs["attention_mask"] = attention_mask.index_select(
+                0, expanded_return_idx
+            )
 
         return input_ids, model_kwargs
 
     def _reorder_cache(self, past, beam_idx):
         return tuple(
-            tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past)
+            tuple(
+                past_state.index_select(0, beam_idx.to(past_state.device))
+                for past_state in layer_past
+            )
             for layer_past in past
         )
 
@@ -523,16 +643,16 @@ class LanguageModel(nn.Module):
     def _update_model_kwargs_for_generation(self, presents, model_kwargs):
         model_kwargs["past"] = presents
         attention_mask = model_kwargs["attention_mask"]
-        model_kwargs["attention_mask"] = torch.cat([attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1)
+        model_kwargs["attention_mask"] = torch.cat(
+            [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))],
+            dim=-1,
+        )
 
         return model_kwargs
 
-    def beam_search(self,
-                    input_ids,
-                    image_hidden_states,
-                    max_length,
-                    beam_scorer,
-                    **model_kwargs):
+    def beam_search(
+        self, input_ids, image_hidden_states, max_length, beam_scorer, **model_kwargs
+    ):
         batch_size = len(beam_scorer._beam_hyps)
         num_beams = beam_scorer.num_beams
 
@@ -543,23 +663,35 @@ class LanguageModel(nn.Module):
                 f"Batch dimension of 'input_ids' should be {num_beams * batch_size}, but is {batch_beam_size}."
             )
 
-        beam_scores = torch.zeros((batch_size, num_beams), dtype=torch.float, device=input_ids.device)
+        beam_scores = torch.zeros(
+            (batch_size, num_beams), dtype=torch.float, device=input_ids.device
+        )
         beam_scores[:, 1:] = -1e9
         beam_scores = beam_scores.view((batch_size * num_beams,))
 
         while True:
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
-            lm_logits, presents = self.forward(**model_inputs, image_hidden_states=image_hidden_states, return_loss=False)
+            lm_logits, presents = self.forward(
+                **model_inputs,
+                image_hidden_states=image_hidden_states,
+                return_loss=False,
+            )
 
             next_token_logits = lm_logits[:, -1, :]
 
-            next_token_scores = nn.functional.log_softmax(next_token_logits, dim=-1)  # (batch_size * num_beams, vocab_size)
+            next_token_scores = nn.functional.log_softmax(
+                next_token_logits, dim=-1
+            )  # (batch_size * num_beams, vocab_size)
 
-            next_token_scores = next_token_scores + beam_scores[:, None].expand_as(next_token_scores)
+            next_token_scores = next_token_scores + beam_scores[:, None].expand_as(
+                next_token_scores
+            )
 
             vocab_size = next_token_scores.shape[-1]
-            next_token_scores = next_token_scores.view(batch_size, num_beams * vocab_size)
+            next_token_scores = next_token_scores.view(
+                batch_size, num_beams * vocab_size
+            )
 
             next_token_scores, next_tokens = torch.topk(
                 next_token_scores, 2 * num_beams, dim=1, largest=True, sorted=True
@@ -582,12 +714,18 @@ class LanguageModel(nn.Module):
             beam_next_tokens = beam_outputs["next_beam_tokens"]
             beam_idx = beam_outputs["next_beam_indices"]
 
-            input_ids = torch.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1)
+            input_ids = torch.cat(
+                [input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1
+            )
 
-            model_kwargs = self._update_model_kwargs_for_generation(presents, model_kwargs)
+            model_kwargs = self._update_model_kwargs_for_generation(
+                presents, model_kwargs
+            )
 
             if model_kwargs["past"] is not None:
-                model_kwargs["past"] = self._reorder_cache(model_kwargs["past"], beam_idx)
+                model_kwargs["past"] = self._reorder_cache(
+                    model_kwargs["past"], beam_idx
+                )
 
             # increase cur_len
             cur_len += 1
@@ -607,38 +745,53 @@ class LanguageModel(nn.Module):
 
         return sequence_outputs["sequences"]
 
-    def greedy_search(self,
-                      input_ids,  # shape [batch_size x seq_len]
-                      image_hidden_states,  # shape [batch_size x image_hidden_dim]
-                      max_length,
-                      **model_kwargs
-                      ) -> torch.LongTensor:  # shape [batch_size x longest_generated_sequence_length]
+    def greedy_search(
+        self,
+        input_ids,  # shape [batch_size x seq_len]
+        image_hidden_states,  # shape [batch_size x image_hidden_dim]
+        max_length,
+        **model_kwargs,
+    ) -> torch.LongTensor:  # shape [batch_size x longest_generated_sequence_length]
         batch_size = input_ids.size(0)
         seq_len = input_ids.size(1)
 
         # keep track of which sequences are already finished
         # a 1 denotes that a sentence in a batch is unfinished, a 0 denotes that a sentence has finished
         # finished sentences are padded until all sentences in the batch are finished
-        unfinished_sequences = torch.ones(size=(batch_size,), dtype=torch.int64, device=self.device)
+        unfinished_sequences = torch.ones(
+            size=(batch_size,), dtype=torch.int64, device=self.device
+        )
         cur_len = seq_len
 
         while True:
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
-            lm_logits, presents = self.forward(**model_inputs, image_hidden_states=image_hidden_states, return_loss=False)
+            lm_logits, presents = self.forward(
+                **model_inputs,
+                image_hidden_states=image_hidden_states,
+                return_loss=False,
+            )
 
-            next_token_logits = lm_logits[:, -1, :]  # of shape [batch_size x vocab_size]
+            next_token_logits = lm_logits[
+                :, -1, :
+            ]  # of shape [batch_size x vocab_size]
 
             # no need to convert logits into probabilities first (via softmax), argmax can be directly applied to logits
-            next_tokens = torch.argmax(next_token_logits, dim=-1)  # of shape [batch_size]
+            next_tokens = torch.argmax(
+                next_token_logits, dim=-1
+            )  # of shape [batch_size]
 
             # convert next token to padding token if given sentence has already finished (denoted by a 0 in unfinished_sequences)
             # padding tokens are ignored when decoding, if skip_special_tokens=True is set
-            next_tokens = next_tokens * unfinished_sequences + self.pad_token_id * (1 - unfinished_sequences)
+            next_tokens = next_tokens * unfinished_sequences + self.pad_token_id * (
+                1 - unfinished_sequences
+            )
 
             # update variables for next step
             input_ids = torch.cat([input_ids, next_tokens[:, None]], dim=-1)
-            model_kwargs = self._update_model_kwargs_for_generation(presents, model_kwargs)
+            model_kwargs = self._update_model_kwargs_for_generation(
+                presents, model_kwargs
+            )
             cur_len += 1
 
             # if eos_token was found in one sentence, set sentence to finished (by converting 1 to 0 for that sentence)
@@ -647,7 +800,9 @@ class LanguageModel(nn.Module):
 
             # stop when all sentences are finished (i.e. all sentences have value 0 in unfinished_sequences),
             # or if we exceed the maximum length
-            if unfinished_sequences.max() == 0 or (max_length and cur_len >= max_length):
+            if unfinished_sequences.max() == 0 or (
+                max_length and cur_len >= max_length
+            ):
                 break
 
         return input_ids

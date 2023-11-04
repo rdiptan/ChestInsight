@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = 'cpu'
+device = "cpu"
+
 
 class BinaryClassifierRegionAbnormal(nn.Module):
     """
@@ -12,6 +13,7 @@ class BinaryClassifierRegionAbnormal(nn.Module):
 
     This classifier is only applied during training and evalution, but not during inference.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -20,7 +22,7 @@ class BinaryClassifierRegionAbnormal(nn.Module):
             nn.ReLU(),
             nn.Linear(in_features=512, out_features=128),
             nn.ReLU(),
-            nn.Linear(in_features=128, out_features=1)
+            nn.Linear(in_features=128, out_features=1),
         )
 
         # since we have around 6.0x more normal regions than abnormal regions (see dataset/dataset_stats.txt generated from compute_stats_dataset.py),
@@ -32,7 +34,7 @@ class BinaryClassifierRegionAbnormal(nn.Module):
         self,
         top_region_features,  # tensor of shape [batch_size x 29 x 1024]
         class_detected,  # boolean tensor of shape [batch_size x 29], indicates if the object detector has detected the region/class or not
-        region_is_abnormal  # ground truth boolean tensor of shape [batch_size x 29], indicates if a region is abnormal (True) or not (False)
+        region_is_abnormal,  # ground truth boolean tensor of shape [batch_size x 29], indicates if a region is abnormal (True) or not (False)
     ):
         # logits of shape [batch_size x 29]
         logits = self.classifier(top_region_features).squeeze(dim=-1)
@@ -41,7 +43,9 @@ class BinaryClassifierRegionAbnormal(nn.Module):
         detected_logits = logits[class_detected]
         detected_region_is_abnormal = region_is_abnormal[class_detected]
 
-        loss = self.loss_fn(detected_logits, detected_region_is_abnormal.type(torch.float32))
+        loss = self.loss_fn(
+            detected_logits, detected_region_is_abnormal.type(torch.float32)
+        )
 
         if self.training:
             return loss

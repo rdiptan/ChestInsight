@@ -1,6 +1,6 @@
-'''
+"""
 Monai Grad-CAM implementation with project specific modifications
-'''
+"""
 from __future__ import annotations
 import warnings
 from collections.abc import Callable, Sequence
@@ -14,6 +14,7 @@ from monai.transforms import ScaleIntensity
 from monai.utils import ensure_tuple, pytorch_after
 from monai.visualize.visualizer import default_upsampler
 
+
 def default_normalizer(x: NdarrayTensor) -> NdarrayTensor:
     """
     A linear intensity scaling by mapping the (min, max) to (1, 0).
@@ -22,6 +23,7 @@ def default_normalizer(x: NdarrayTensor) -> NdarrayTensor:
 
     Note: This will flip magnitudes (i.e., smallest will become biggest and vice versa).
     """
+
     def _compute(data: np.ndarray) -> np.ndarray:
         scaler = ScaleIntensity(minv=0.0, maxv=1.0)
         return np.stack([scaler(i) for i in data], axis=0)
@@ -74,16 +76,20 @@ class ModelWithHooks:
             if self.register_forward:
                 mod.register_forward_hook(self.forward_hook(name))
         if self.target_layers and (len(_registered) != len(self.target_layers)):
-            warnings.warn(f"Not all target_layers exist in the network module: targets: {self.target_layers}.")
+            warnings.warn(
+                f"Not all target_layers exist in the network module: targets: {self.target_layers}."
+            )
 
     def backward_hook(self, name):
         def _hook(_module, _grad_input, grad_output):
             self.gradients[name] = grad_output[0]
+
         return _hook
 
     def forward_hook(self, name):
         def _hook(_module, _input, output):
             self.activations[name] = output
+
         return _hook
 
     def get_layer(self, layer_id: str | Callable[[nn.Module], nn.Module]) -> nn.Module:
@@ -122,7 +128,11 @@ class ModelWithHooks:
                     warnings.warn(
                         f"Backward hook for {layer} is not triggered; `requires_grad` of {layer} should be `True`."
                     )
-            grad = tuple(self.gradients[layer] for layer in self.target_layers if layer in self.gradients)
+            grad = tuple(
+                self.gradients[layer]
+                for layer in self.target_layers
+                if layer in self.gradients
+            )
         if train:
             self.model.train()
         return logits, acti, grad
@@ -169,6 +179,7 @@ class GradCAM:
         - :py:class:`monai.visualize.class_activation_maps.CAM`
 
     """
+
     def __init__(
         self,
         nn_module: nn.Module,
@@ -181,7 +192,10 @@ class GradCAM:
         # Convert to model with hooks if necessary
         if not isinstance(nn_module, ModelWithHooks):
             self.nn_module = ModelWithHooks(
-                nn_module, target_layers, register_forward=True, register_backward=register_backward
+                nn_module,
+                target_layers,
+                register_forward=True,
+                register_backward=register_backward,
             )
         else:
             self.nn_module = nn_module
@@ -199,7 +213,9 @@ class GradCAM:
         Returns:
             shape of the actual feature map.
         """
-        return self.compute_map(torch.zeros(*input_size, device=device), layer_idx=layer_idx, **kwargs).shape
+        return self.compute_map(
+            torch.zeros(*input_size, device=device), layer_idx=layer_idx, **kwargs
+        ).shape
 
     def _upsample_and_post_process(self, acti_map, x):
         # upsampling and postprocessing
@@ -207,8 +223,12 @@ class GradCAM:
         acti_map = self.upsampler(img_spatial)(acti_map)
         return self.postprocessing(acti_map)
 
-    def compute_map(self, x, class_idx=None, retain_graph=False, layer_idx=-1, **kwargs):
-        _, acti, grad = self.nn_module(x, class_idx=class_idx, retain_graph=retain_graph, **kwargs)
+    def compute_map(
+        self, x, class_idx=None, retain_graph=False, layer_idx=-1, **kwargs
+    ):
+        _, acti, grad = self.nn_module(
+            x, class_idx=class_idx, retain_graph=retain_graph, **kwargs
+        )
         acti, grad = acti[layer_idx], grad[layer_idx]
         b, c, *spatial = grad.shape
         weights = grad.view(b, c, -1).mean(2).view(b, c, *[1] * len(spatial))
@@ -229,5 +249,11 @@ class GradCAM:
         Returns:
             activation maps
         """
-        acti_map = self.compute_map(x, class_idx=class_idx, retain_graph=retain_graph, layer_idx=layer_idx, **kwargs)
+        acti_map = self.compute_map(
+            x,
+            class_idx=class_idx,
+            retain_graph=retain_graph,
+            layer_idx=layer_idx,
+            **kwargs,
+        )
         return self._upsample_and_post_process(acti_map, x)

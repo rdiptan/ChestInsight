@@ -22,6 +22,7 @@ class CustomRegionProposalNetwork(RegionProposalNetwork):
     Which is why the "if self.training:" condition of line 375 of the PyTorch implementation is taken out in my custom
     implementation.
     """
+
     def __init__(
         self,
         anchor_generator: AnchorGenerator,
@@ -56,19 +57,24 @@ class CustomRegionProposalNetwork(RegionProposalNetwork):
         features: Dict[str, Tensor],
         targets: Optional[List[Dict[str, Tensor]]] = None,
     ) -> Tuple[List[Tensor], Dict[str, Tensor]]:
-
         features = list(features.values())
         objectness, pred_bbox_deltas = self.head(features)
         anchors = self.anchor_generator(images, features)
 
         num_images = len(anchors)
         num_anchors_per_level_shape_tensors = [o[0].shape for o in objectness]
-        num_anchors_per_level = [s[0] * s[1] * s[2] for s in num_anchors_per_level_shape_tensors]
-        objectness, pred_bbox_deltas = concat_box_prediction_layers(objectness, pred_bbox_deltas)
+        num_anchors_per_level = [
+            s[0] * s[1] * s[2] for s in num_anchors_per_level_shape_tensors
+        ]
+        objectness, pred_bbox_deltas = concat_box_prediction_layers(
+            objectness, pred_bbox_deltas
+        )
 
         proposals = self.box_coder.decode(pred_bbox_deltas.detach(), anchors)
         proposals = proposals.view(num_images, -1, 4)
-        boxes, scores = self.filter_proposals(proposals, objectness, images.image_sizes, num_anchors_per_level)
+        boxes, scores = self.filter_proposals(
+            proposals, objectness, images.image_sizes, num_anchors_per_level
+        )
 
         losses = {}
         if targets is not None:

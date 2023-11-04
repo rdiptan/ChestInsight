@@ -20,7 +20,7 @@ from transformers import GPT2Tokenizer
 from src.full_model.report_generation_model import ReportGenerationModel
 from src.custom_gradcam import GradCAM
 
-torch.cuda.is_available = lambda : False
+torch.cuda.is_available = lambda: False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BERTSCORE_SIMILARITY_THRESHOLD = 0.9
 IMAGE_INPUT_SIZE = 512
@@ -29,13 +29,17 @@ NUM_BEAMS = 4
 mean = 0.471  # see get_transforms in src/dataset/compute_mean_std_dataset.py
 std = 0.302
 
+
 def get_tokenizer():
     checkpoint = "healx/gpt-2-pubmed-medium"
     tokenizer = GPT2Tokenizer.from_pretrained(checkpoint)
     tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
 
-def write_generated_reports_to_txt(images_paths, generated_reports, generated_reports_txt_path):
+
+def write_generated_reports_to_txt(
+    images_paths, generated_reports, generated_reports_txt_path
+):
     with open(generated_reports_txt_path, "w") as f:
         for image_path, report in zip(images_paths, generated_reports):
             f.write(f"Image path: {image_path}\n")
@@ -43,9 +47,16 @@ def write_generated_reports_to_txt(images_paths, generated_reports, generated_re
             f.write("=" * 30)
             f.write("\n\n")
 
-def remove_duplicate_generated_sentences(generated_report, bert_score, sentence_tokenizer):
-    def check_gen_sent_in_sents_to_be_removed(gen_sent, similar_generated_sents_to_be_removed):
-        for lists_of_gen_sents_to_be_removed in similar_generated_sents_to_be_removed.values():
+
+def remove_duplicate_generated_sentences(
+    generated_report, bert_score, sentence_tokenizer
+):
+    def check_gen_sent_in_sents_to_be_removed(
+        gen_sent, similar_generated_sents_to_be_removed
+    ):
+        for (
+            lists_of_gen_sents_to_be_removed
+        ) in similar_generated_sents_to_be_removed.values():
             if gen_sent in lists_of_gen_sents_to_be_removed:
                 return True
         return False
@@ -72,15 +83,22 @@ def remove_duplicate_generated_sentences(generated_report, bert_score, sentence_
         gen_sent_1 = gen_sents[i]
 
         for j in range(i + 1, len(gen_sents)):
-            if check_gen_sent_in_sents_to_be_removed(gen_sent_1, similar_generated_sents_to_be_removed):
+            if check_gen_sent_in_sents_to_be_removed(
+                gen_sent_1, similar_generated_sents_to_be_removed
+            ):
                 break
 
             gen_sent_2 = gen_sents[j]
-            if check_gen_sent_in_sents_to_be_removed(gen_sent_2, similar_generated_sents_to_be_removed):
+            if check_gen_sent_in_sents_to_be_removed(
+                gen_sent_2, similar_generated_sents_to_be_removed
+            ):
                 continue
 
             bert_score_result = bert_score.compute(
-                lang="en", predictions=[gen_sent_1], references=[gen_sent_2], model_type="distilbert-base-uncased"
+                lang="en",
+                predictions=[gen_sent_1],
+                references=[gen_sent_2],
+                model_type="distilbert-base-uncased",
             )
 
             if bert_score_result["f1"][0] > BERTSCORE_SIMILARITY_THRESHOLD:
@@ -92,17 +110,27 @@ def remove_duplicate_generated_sentences(generated_report, bert_score, sentence_
     generated_report = " ".join(
         sent
         for sent in gen_sents
-        if not check_gen_sent_in_sents_to_be_removed(sent, similar_generated_sents_to_be_removed)
+        if not check_gen_sent_in_sents_to_be_removed(
+            sent, similar_generated_sents_to_be_removed
+        )
     )
     return generated_report
 
-def convert_generated_sentences_to_report(generated_sents_for_selected_regions, bert_score, sentence_tokenizer):
+
+def convert_generated_sentences_to_report(
+    generated_sents_for_selected_regions, bert_score, sentence_tokenizer
+):
     generated_report = " ".join(sent for sent in generated_sents_for_selected_regions)
 
-    generated_report = remove_duplicate_generated_sentences(generated_report, bert_score, sentence_tokenizer)
+    generated_report = remove_duplicate_generated_sentences(
+        generated_report, bert_score, sentence_tokenizer
+    )
     return generated_report
 
-def get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer):
+
+def get_report_for_image(
+    model, image_tensor, tokenizer, bert_score, sentence_tokenizer
+):
     with torch.autocast(device_type="cuda", dtype=torch.float16):
         output = model.generate(
             image_tensor.to(device, non_blocking=True),
@@ -122,6 +150,7 @@ def get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_to
 
     return generated_report
 
+
 def get_image_tensor(image_path):
     # cv2.imread by default loads an image with 3 channels
     # since we have grayscale images, we only have 1 channel and thus use cv2.IMREAD_UNCHANGED to read in the 1 channel
@@ -129,12 +158,16 @@ def get_image_tensor(image_path):
     # coverts image to gray scale
     if len(image.shape) == 3 and image.shape[2] == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    #image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     val_test_transforms = A.Compose(
         [
             A.LongestMaxSize(max_size=IMAGE_INPUT_SIZE, interpolation=cv2.INTER_AREA),
-            A.PadIfNeeded(min_height=IMAGE_INPUT_SIZE, min_width=IMAGE_INPUT_SIZE, border_mode=cv2.BORDER_CONSTANT),
+            A.PadIfNeeded(
+                min_height=IMAGE_INPUT_SIZE,
+                min_width=IMAGE_INPUT_SIZE,
+                border_mode=cv2.BORDER_CONSTANT,
+            ),
             A.Normalize(mean=mean, std=std),
             ToTensorV2(),
         ]
@@ -144,6 +177,7 @@ def get_image_tensor(image_path):
     image_transformed_batch = image_transformed.unsqueeze(0)  # shape (1, 1, 512, 512)
 
     return image_transformed_batch
+
 
 def get_model(checkpoint_path):
     checkpoint = torch.load(
@@ -161,11 +195,12 @@ def get_model(checkpoint_path):
     del checkpoint
     return model
 
-def main_model(input_image:str):
+
+def main_model(input_image: str):
     checkpoint_path = "./full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
     model = get_model(checkpoint_path)
     ####################################Grad-CAM Map####################################
-    cam = GradCAM(model.object_detector.backbone, '7.2.conv3')
+    cam = GradCAM(model.object_detector.backbone, "7.2.conv3")
     ####################################################################################
     print("Model instantiated.")
     image_path = input_image
@@ -175,14 +210,17 @@ def main_model(input_image:str):
     image_tensor = get_image_tensor(image_path)  # shape (1, 1, 512, 512)
     ####################################Grad-CAM Map####################################
     heatmap = cam(image_tensor)
-    heatmap = heatmap[0,0].numpy()
+    heatmap = heatmap[0, 0].numpy()
     # plt.imshow(image_tensor[0,0].cpu().numpy(), cmap = 'gray')
     # plt.imshow(heatmap, vmax = 0.000000000000000001, alpha = 0.3)
     # plt.savefig('heatmap.png')
     ####################################################################################
-    generated_report = get_report_for_image(model, image_tensor, tokenizer, bert_score, sentence_tokenizer)
+    generated_report = get_report_for_image(
+        model, image_tensor, tokenizer, bert_score, sentence_tokenizer
+    )
 
     return generated_report, heatmap
+
 
 if __name__ == "__main__":
     main_model()
