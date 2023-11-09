@@ -27,8 +27,11 @@ from image_enhancement import (
     median,
 )
 from src.full_model.generate_reports_for_images import main_model, get_image_tensor
+
 # ignore warnings
 warnings.filterwarnings("ignore")
+
+
 # helper functions
 def save_and_display_gradcam(img_path, heatmap, alpha=0.4):
     # Load the original image
@@ -55,6 +58,7 @@ def save_and_display_gradcam(img_path, heatmap, alpha=0.4):
     superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img)
 
     return superimposed_img
+
 
 def features():
     """
@@ -123,94 +127,130 @@ def features():
     # ImgenhancementTab: Here is the entry point for SOTA Image enhancement
     with ImgEnhancementTab:
         # define path
-        path = './data/'
-        
+        path = "./data/"
+
         # upload a file
-        image = st.file_uploader('Upload an image for enhancement')
+        image = st.file_uploader("Upload an image for enhancement")
 
         # checks if file has been uploaded
         if image:
             # asks user for an algorithm
             option = st.selectbox(
-                'Select an algorithm for image enhancement',
-                ('Contrast limited adaptive histogram equalization','Brightness', 'Histogram Equalization','Gamma correction','Super Resolution','Smoothing','Thresholding Intensity','Median Filter'), index=1)
-            
+                "Select an algorithm for image enhancement",
+                (
+                    "Contrast limited adaptive histogram equalization",
+                    "Brightness",
+                    "Histogram Equalization",
+                    "Gamma correction",
+                    "Super Resolution",
+                    "Smoothing",
+                    "Thresholding Intensity",
+                    "Median Filter",
+                ),
+                index=1,
+            )
+
             # create colums and displays original image on the left
             col_1, col_2 = st.columns(2)
-            col_1.image(image, caption='Original Image', use_column_width=True)
+            col_1.image(image, caption="Original Image", use_column_width=True)
 
             # Uses the selected options to transform image
-            if option == 'Contrast limited adaptive histogram equalization':
-                if col_1.button('Click to perform enhancement'):
-                    output_image = clahe_image_enhance(path + image.name, mode='CLHE')
-                    col_2.image(output_image, caption='CLAHE Enhanced Image')
+            if option == "Contrast limited adaptive histogram equalization":
+                if col_1.button("Click to perform enhancement"):
+                    output_image = clahe_image_enhance(path + image.name, mode="CLHE")
+                    col_2.image(output_image, caption="CLAHE Enhanced Image")
                 # saving result
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_CLAHE_enhanced.jpeg', clahe_image_enhance(path + image.name, mode='CLHE'))
-                    st.success(f"Image with Contrast limited adaptive histogram equalization Enhancement saved!")
-            
-            # Uses the selected options to transform image
-            elif option == 'Histogram Equalization':
-                if col_1.button('Click to perform enhancement'):
-                    output_image = clahe_image_enhance(path + image.name, mode='HE')
-                    col_2.image(output_image, caption='HE Enhanced Image')
-                # saving result
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_HE_enhanced.jpeg', clahe_image_enhance(path + image.name, mode='HE'))
-                    st.success(f"Image with Contrast limited adaptive histogram equalization Enhancement saved!")
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_CLAHE_enhanced.jpeg',
+                        clahe_image_enhance(path + image.name, mode="CLHE"),
+                    )
+                    st.success(
+                        f"Image with Contrast limited adaptive histogram equalization Enhancement saved!"
+                    )
 
-            elif option == 'Brightness':
-                value = st.slider('Increase brightness with this slide bar',0,255)
-                output_image = increase_brightness(path + image.name,value)
-                col_2.image(output_image, caption='Brightness')
+            # Uses the selected options to transform image
+            elif option == "Histogram Equalization":
+                if col_1.button("Click to perform enhancement"):
+                    output_image = clahe_image_enhance(path + image.name, mode="HE")
+                    col_2.image(output_image, caption="HE Enhanced Image")
                 # saving result
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_increase_brightness_enhanced.jpeg', increase_brightness(path + image.name))
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_HE_enhanced.jpeg',
+                        clahe_image_enhance(path + image.name, mode="HE"),
+                    )
+                    st.success(
+                        f"Image with Contrast limited adaptive histogram equalization Enhancement saved!"
+                    )
+
+            elif option == "Brightness":
+                value = st.slider("Increase brightness with this slide bar", 0, 255)
+                output_image = increase_brightness(path + image.name, value)
+                col_2.image(output_image, caption="Brightness")
+                # saving result
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_increase_brightness_enhanced.jpeg',
+                        increase_brightness(path + image.name),
+                    )
                     st.success(f"Image with ssr saved!")
 
-            elif option == 'Gamma correction':
-                if col_1.button('Click to perform enhancement'):
+            elif option == "Gamma correction":
+                if col_1.button("Click to perform enhancement"):
                     output_image = gamma(path + image.name)
-                    col_2.image(output_image, caption='Gamma Corrected Image')
+                    col_2.image(output_image, caption="Gamma Corrected Image")
 
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_gamma_corrected.jpeg',gamma(path + image.name))
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_gamma_corrected.jpeg',
+                        gamma(path + image.name),
+                    )
                     st.success(f"Image with Gamma Correction Enhancement saved!")
 
-            elif option == 'Super Resolution':
-                if col_1.button('Click to perform enhancement'):
+            elif option == "Super Resolution":
+                if col_1.button("Click to perform enhancement"):
                     output_image = super_resolution(path + image.name, upscale_factor=4)
-                    col_2.image(output_image, caption='Super Resolved Image')
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_super_resolved.jpeg',super_resolution(path + image.name))
+                    col_2.image(output_image, caption="Super Resolved Image")
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_super_resolved.jpeg',
+                        super_resolution(path + image.name),
+                    )
                     st.success(f"Image with Super Resolution saved!")
 
-            elif option == 'Smoothing':
-                if col_1.button('Click to perform enhancement'):
+            elif option == "Smoothing":
+                if col_1.button("Click to perform enhancement"):
                     output_image = noise_reduction(path + image.name, sigma=1.2)
-                    col_2.image(output_image, caption='Noise-Reduced Image')
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_noise-reduced.jpeg',noise_reduction(path + image.name))
+                    col_2.image(output_image, caption="Noise-Reduced Image")
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_noise-reduced.jpeg',
+                        noise_reduction(path + image.name),
+                    )
                     st.success(f"Image with Smoothing saved!")
 
-            elif option == 'Thresholding Intensity':
-                value = st.slider('Increase threshold with this slide bar', 0, 200)
-                output_image = threshold_intensity(path + image.name,value)
-                col_2.image(output_image, caption='Thresholded Image')
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_threshold_intensity.jpeg',
-                                threshold_intensity(path + image.name,value))
+            elif option == "Thresholding Intensity":
+                value = st.slider("Increase threshold with this slide bar", 0, 200)
+                output_image = threshold_intensity(path + image.name, value)
+                col_2.image(output_image, caption="Thresholded Image")
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_threshold_intensity.jpeg',
+                        threshold_intensity(path + image.name, value),
+                    )
                     st.success(f"Image with Median filter saved!")
 
-
-            elif option == 'Median Filter':
-                if col_1.button('Click to perform enhancement'):
+            elif option == "Median Filter":
+                if col_1.button("Click to perform enhancement"):
                     output_image = median(path + image.name)
-                    col_2.image(output_image, caption='Median Enhanced Image')
+                    col_2.image(output_image, caption="Median Enhanced Image")
                 # saving result
-                if col_2.button('Save Enhanced Image'):
-                    cv2.imwrite(f'{path}{image.name.split(".")[0]}_Median_enhanced.jpeg',
-                                median(path + image.name))
+                if col_2.button("Save Enhanced Image"):
+                    cv2.imwrite(
+                        f'{path}{image.name.split(".")[0]}_Median_enhanced.jpeg',
+                        median(path + image.name),
+                    )
                     st.success(f"Image with Median Filter Enhancement saved!")
 
     # ImgAnnotationTab: Here is the entry point for image annotation
