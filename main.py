@@ -1,55 +1,116 @@
+import io
 import cv2
 import json
 import textwrap
 import warnings
 import numpy as np
 import pandas as pd
+from PIL import Image
 import streamlit as st
 from utils import docs
+import matplotlib.cm as cm
+from tensorflow import keras
+import matplotlib.pyplot as plt
+
 st.set_page_config(layout="wide")
-from streamlit_option_menu import option_menu   
+from streamlit_option_menu import option_menu
 from streamlit_extras.colored_header import colored_header
 from image_annotation import run_cls, dataframe_annotation
 from dicom_viewer_and_annon import anonymize_dicom_file, dicom_viewer
-from image_enhancement import clahe_image_enhance, increase_brightness,gamma,super_resolution, noise_reduction,threshold_intensity,median
-from src.full_model.generate_reports_for_images import main_model
+from image_enhancement import (
+    clahe_image_enhance,
+    increase_brightness,
+    gamma,
+    super_resolution,
+    noise_reduction,
+    threshold_intensity,
+    median,
+)
+from src.full_model.generate_reports_for_images import main_model, get_image_tensor
 # ignore warnings
 warnings.filterwarnings("ignore")
+# helper functions
+def save_and_display_gradcam(img_path, heatmap, alpha=0.4):
+    # Load the original image
+    img = keras.preprocessing.image.load_img(img_path)
+    img = keras.preprocessing.image.img_to_array(img)
+
+    # Rescale heatmap to a range 0-255
+    heatmap = np.uint8(255 * heatmap)
+
+    # Use jet colormap to colorize heatmap
+    jet = cm.get_cmap("jet")
+
+    # Use RGB values of the colormap
+    jet_colors = jet(np.arange(256))[:, :3]
+    jet_heatmap = jet_colors[heatmap]
+
+    # Create an image with RGB colorized heatmap
+    jet_heatmap = keras.preprocessing.image.array_to_img(jet_heatmap)
+    jet_heatmap = jet_heatmap.resize((img.shape[1], img.shape[0]))
+    jet_heatmap = keras.preprocessing.image.img_to_array(jet_heatmap)
+
+    # Superimpose the heatmap on original image
+    superimposed_img = jet_heatmap * alpha + img
+    superimposed_img = keras.preprocessing.image.array_to_img(superimposed_img)
+
+    return superimposed_img
 
 def features():
     """
     Function to handle the different features of the application.
     """
     #  headings and tabs creation
-    DicomAnonymizationTab, ImgAnnotationTab, ImgEnhancementTab, PredictionTab,  = st.tabs(["Dicom Image Explorer and Anonymizer", 
-    "Image Annotation and labelling", "Image Enhancement", "Prediction and Report Generation", ])
-    
+    (
+        DicomAnonymizationTab,
+        ImgAnnotationTab,
+        ImgEnhancementTab,
+        PredictionTab,
+    ) = st.tabs(
+        [
+            "Dicom Image Explorer and Anonymizer",
+            "Image Annotation and labelling",
+            "Image Enhancement",
+            "Prediction and Report Generation",
+        ]
+    )
+
     # DicomAnnonymizationTab: Here is the entry point for dicom image explorer
     with DicomAnonymizationTab:
-        DcmAnonTab, DcmViewTab, = st.tabs(["Dicom Image Anonymization", "Dicom Viewer",])
-        
+        (
+            DcmAnonTab,
+            DcmViewTab,
+        ) = st.tabs(
+            [
+                "Dicom Image Anonymization",
+                "Dicom Viewer",
+            ]
+        )
+
         # DcmAnonTab: Here is the entry point for dicom image annonymization
         with DcmAnonTab:
-            
             # upload a dicom file
             dicom_file = st.file_uploader("Upload a DICOM file", key="dicom_annon")
-            
+
             # checks if file has been uploaded
-            if dicom_file is not None: 
-                
+            if dicom_file is not None:
                 # uses anonymize_dicom_file to anonymize DICOM file
                 anonymized_dicom_dataset = anonymize_dicom_file(dicom_file)
-                desired_file_name = st.text_input("Enter the desired file name for the anonymized DICOM file, press enter to save: ")
-                
+                desired_file_name = st.text_input(
+                    "Enter the desired file name for the anonymized DICOM file, press enter to save: "
+                )
+
                 # Save the anonymized DICOM file
                 if st.button("Save anonymized dicom file"):
                     if desired_file_name is not None:
-                        if not desired_file_name.endswith('.dcm'):
+                        if not desired_file_name.endswith(".dcm"):
                             # Add the .dcm extension if not provided
-                            desired_file_name += '.dcm'
-                            anonymized_dicom_dataset.save_as(f'data/{desired_file_name}')
-                            st.success('Anonymized Dicom file Saved!')
-        
+                            desired_file_name += ".dcm"
+                            anonymized_dicom_dataset.save_as(
+                                f"data/{desired_file_name}"
+                            )
+                            st.success("Anonymized Dicom file Saved!")
+
         # DcmViewTab: Here is the entry point for dicom image viewer
         with DcmViewTab:
             # upload a dicom file
@@ -58,7 +119,7 @@ def features():
             if dicom_file is not None:
                 # uses dicom_viewer function to view uploaded file
                 dicom_viewer(dicom_file)
-    
+
     # ImgenhancementTab: Here is the entry point for SOTA Image enhancement
     with ImgEnhancementTab:
         # define path
@@ -155,83 +216,90 @@ def features():
     # ImgAnnotationTab: Here is the entry point for image annotation
     with ImgAnnotationTab:
         # define labels
-        custom_labels = ["", "Lesion", "Positive", "Negative", "Tumor","Pneumonia", "Covid", None]
+        custom_labels = [
+            "",
+            "Lesion",
+            "Positive",
+            "Negative",
+            "Tumor",
+            "Pneumonia",
+            "Covid",
+            None,
+        ]
         # gets directory from user
-        path = st.text_input('Enter the path to image folder', key="clsTab_path")
+        path = st.text_input("Enter the path to image folder", key="clsTab_path")
         # checks if path has been given
         if path:
             # uses run_cls function for annotation
             select_label, report = run_cls(f"{path}", custom_labels)
             # saves generated datadrame
-            dataframe_annotation(f'{path}/*.jpg', custom_labels, select_label, report)
-    
+            dataframe_annotation(f"{path}/*.jpg", custom_labels, select_label, report)
+
     # FinetuningTab: Here is the entry point for model finetuning
     # with FinetuningTab:
     #     st.write('wait a minute')
-    
+
     # PredictionTab: Here is the entry point for report generation
     with PredictionTab:
         # upload an image file
-        uploaded_image = st.file_uploader('Upload file for Report Generation!')
-        
-        # converts and saves BGR (3 channel) images to grayscale
-        def coloured_to_gray_scale(input_image: str, path:str):
-            """  
-            Converts and saves BGR (3 channel) images to grayscale.
+        uploaded_image = st.file_uploader("Upload file for Report Generation!")
 
-            Args:
-                input_image (str): Path to the input image file.
-                path (str): Path to the directory where the grayscale image will be saved.
-
-            Returns:
-                bool: True if the grayscale image was successfully saved, False otherwise.
-            """
-            img = cv2.imread(input_image)
-            gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            return cv2.imwrite(f'{path}{input_image.split("/")[2].split(".")[0]}_gray_scaled.jpg', gray_image)
-       
-        # define path 
+        # define path
         path = "./data/"
-        col_1, col_2 = st.columns(2)   
-        
+        col_1, col_2, col_3 = st.columns(3)
+
         # checks if file has been uploaded
         if uploaded_image:
             # displays original image on the left
             col_1.image(uploaded_image)
-            coloured_to_gray_scale(f"{path}{uploaded_image.name}", path)
-            if col_1.button('Generate Report'):   
+            # generate reports
+            if col_1.button("Generate Report"):
                 # uses model to generate and display report on the right
-                report = main_model(f"{path}{uploaded_image.name.split('.')[0]}_gray_scaled.jpg")
-                col_2.write(report)
+                report, heatmap = main_model(f"{path}{uploaded_image.name}")
+                grad_cam_img = save_and_display_gradcam(
+                    f"{path}{uploaded_image.name}", heatmap
+                )
+                col_2.image(grad_cam_img)
+                col_3.write(report)
 
 
 def main():
-    ##st.markdown("<h2 style='text-align: center; color: blue;'>Smart Chest-Xray Analysis and Report Generation!</h2>", unsafe_allow_html=True)
     """
     Main function to run the application.
     """
-    
+
     # sidebar: used option_menu just for asthetics
     with st.sidebar:
-        choice = option_menu("Main Menu", ["About", "Try out!"], 
-            icons=['house', 'fire'], menu_icon="cast", default_index=0,
-        styles={
-        "container": {"padding": "0!important", "background-color": "#262730"},
-        "icon": {"color": "white", "font-size": "25px"}, 
-        "nav-link": {"font-size": "25px", "text-align": "left", "margin":"0px", "--hover-color": "#3739b5"},
-        "nav-link-selected": {"background-color": "#1f8ff6"},})  
+        choice = option_menu(
+            "Main Menu",
+            ["About", "Try out!"],
+            icons=["house", "fire"],
+            menu_icon="cast",
+            default_index=0,
+            styles={
+                "container": {"padding": "0!important", "background-color": "#262730"},
+                "icon": {"color": "white", "font-size": "25px"},
+                "nav-link": {
+                    "font-size": "25px",
+                    "text-align": "left",
+                    "margin": "0px",
+                    "--hover-color": "#3739b5",
+                },
+                "nav-link-selected": {"background-color": "#1f8ff6"},
+            },
+        )
 
-    # navigations 
+    # navigations
     if choice == "About":
-        st.image('utils/CI 1.png', use_column_width=True)
-        st.write('Write short documentation here')
-        docs() 
- 
+        st.image("utils/CI 1.png", use_column_width=True)
+        docs()
+
     elif choice == "Try out!":
         colored_header(
-        label="CHEST-INSIGHT: Smart Chest-Xray Analysis and Report Generation! ",
-        description="Use the tabs below to tryout our dedicated tools",
-        color_name="violet-70",)
+            label="CHEST-INSIGHT: Smart Chest-Xray Analysis and Report Generation! ",
+            description="Use the tabs below to tryout our dedicated tools",
+            color_name="violet-70",
+        )
         features()
 
 
