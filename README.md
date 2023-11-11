@@ -11,7 +11,7 @@ Clone the repository:
 
 To install the required packages, run the following command:
 
-```pip install -r requirements.txt``` 
+```pip install -r utils/requirements.txt``` 
 
 ### Usage
 
