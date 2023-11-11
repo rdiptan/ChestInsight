@@ -15,8 +15,9 @@ To install the required packages, run the following command:
 
 ### Usage
 
-To use the project, run the following command:
+To use the project, run the following commands:
 
+```cd src```
 ```streamlit run main.py``` 
 
 Note: All data files must be located in ```.data/```

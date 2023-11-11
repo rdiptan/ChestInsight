@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def docs():
+def docs():  # sourcery skip: extract-duplicate-method
     st.title("ChestInsight")
     st.markdown("### Smart Chest Xray Analysis and Report Generation")
 
@@ -17,6 +17,7 @@ def docs():
 
     st.markdown("### Usage")
     st.markdown("To use the project, run the following command:")
+    st.code("cd src/")
     st.code("streamlit run main.py")
     st.markdown("Note: All data files must be located in `.data/`")
 
