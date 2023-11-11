@@ -10,9 +10,9 @@ from torchvision.models.detection.faster_rcnn import TwoMLPHead, FastRCNNPredict
 from torchvision.models.detection.rpn import AnchorGenerator, RPNHead
 # from torchinfo import summary
 
-from src.object_detector.custom_roi_heads import CustomRoIHeads
-from src.object_detector.custom_rpn import CustomRegionProposalNetwork
-from src.object_detector.image_list import ImageList
+from object_detector.custom_roi_heads import CustomRoIHeads
+from object_detector.custom_rpn import CustomRegionProposalNetwork
+from object_detector.image_list import ImageList
 
 torch.cuda.is_available = lambda: False
 

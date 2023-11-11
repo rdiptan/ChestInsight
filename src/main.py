@@ -60,7 +60,7 @@ def save_and_display_gradcam(img_path, heatmap, alpha=0.4):
     return superimposed_img
 
 
-def features():  # sourcery skip: low-code-quality
+def features():    # sourcery skip: low-code-quality
     """
     Function to handle the different features of the application.
     """
@@ -128,11 +128,7 @@ def features():  # sourcery skip: low-code-quality
     with ImgEnhancementTab:
         # define path
         path = "../data/"
-        # upload an image file
-        image = st.file_uploader("Upload an image for enhancement")
-
-        # checks if file has been uploaded
-        if image:
+        if image := st.file_uploader("Upload an image for enhancement"):
             # asks user for an algorithm
             option = st.selectbox(
                 "Select an algorithm for image enhancement",
@@ -165,10 +161,9 @@ def features():  # sourcery skip: low-code-quality
                         clahe_image_enhance(path + image.name, mode="CLHE"),
                     )
                     st.success(
-                        f"Image with Contrast limited adaptive histogram equalization Enhancement saved!"
+                        "Image with Contrast limited adaptive histogram equalization Enhancement saved!"
                     )
 
-            # Uses the selected options to transform image
             elif option == "Histogram Equalization":
                 if col_1.button("Click to perform enhancement"):
                     output_image = clahe_image_enhance(path + image.name, mode="HE")
@@ -180,7 +175,7 @@ def features():  # sourcery skip: low-code-quality
                         clahe_image_enhance(path + image.name, mode="HE"),
                     )
                     st.success(
-                        f"Image with Contrast limited adaptive histogram equalization Enhancement saved!"
+                        "Image with Contrast limited adaptive histogram equalization Enhancement saved!"
                     )
 
             elif option == "Brightness":
@@ -191,9 +186,9 @@ def features():  # sourcery skip: low-code-quality
                 if col_2.button("Save Enhanced Image"):
                     cv2.imwrite(
                         f'{path}{image.name.split(".")[0]}_increase_brightness_enhanced.jpeg',
-                        increase_brightness(path + image.name),
+                        increase_brightness(path + image.name, value),
                     )
-                    st.success(f"Image with ssr saved!")
+                    st.success("Image with ssr saved!")
 
             elif option == "Gamma correction":
                 if col_1.button("Click to perform enhancement"):
@@ -205,7 +200,7 @@ def features():  # sourcery skip: low-code-quality
                         f'{path}{image.name.split(".")[0]}_gamma_corrected.jpeg',
                         gamma(path + image.name),
                     )
-                    st.success(f"Image with Gamma Correction Enhancement saved!")
+                    st.success("Image with Gamma Correction Enhancement saved!")
 
             elif option == "Super Resolution":
                 if col_1.button("Click to perform enhancement"):
@@ -216,7 +211,7 @@ def features():  # sourcery skip: low-code-quality
                         f'{path}{image.name.split(".")[0]}_super_resolved.jpeg',
                         super_resolution(path + image.name),
                     )
-                    st.success(f"Image with Super Resolution saved!")
+                    st.success("Image with Super Resolution saved!")
 
             elif option == "Smoothing":
                 if col_1.button("Click to perform enhancement"):
@@ -227,7 +222,7 @@ def features():  # sourcery skip: low-code-quality
                         f'{path}{image.name.split(".")[0]}_noise-reduced.jpeg',
                         noise_reduction(path + image.name),
                     )
-                    st.success(f"Image with Smoothing saved!")
+                    st.success("Image with Smoothing saved!")
 
             elif option == "Thresholding Intensity":
                 value = st.slider("Increase threshold with this slide bar", 0, 200)
@@ -238,7 +233,7 @@ def features():  # sourcery skip: low-code-quality
                         f'{path}{image.name.split(".")[0]}_threshold_intensity.jpeg',
                         threshold_intensity(path + image.name, value),
                     )
-                    st.success(f"Image with Median filter saved!")
+                    st.success("Image with Median filter saved!")
 
             elif option == "Median Filter":
                 if col_1.button("Click to perform enhancement"):
@@ -250,7 +245,7 @@ def features():  # sourcery skip: low-code-quality
                         f'{path}{image.name.split(".")[0]}_Median_enhanced.jpeg',
                         median(path + image.name),
                     )
-                    st.success(f"Image with Median Filter Enhancement saved!")
+                    st.success("Image with Median Filter Enhancement saved!")
 
     # ImgAnnotationTab: Here is the entry point for image annotation
     with ImgAnnotationTab:
@@ -265,10 +260,9 @@ def features():  # sourcery skip: low-code-quality
             "Covid",
             None,
         ]
-        # gets directory from user
-        path = st.text_input("Enter the path to image folder", key="clsTab_path")
-        # checks if path has been given
-        if path:
+        if path := st.text_input(
+            "Enter the path to image folder", key="clsTab_path"
+        ):
             # uses run_cls function for annotation
             select_label, report = run_cls(f"{path}", custom_labels)
             # saves generated datadrame

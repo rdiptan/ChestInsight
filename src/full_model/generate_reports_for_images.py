@@ -17,8 +17,8 @@ from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
 import numpy as np
 from transformers import GPT2Tokenizer
-from src.full_model.report_generation_model import ReportGenerationModel
-from src.custom_gradcam import GradCAM
+from full_model.report_generation_model import ReportGenerationModel
+from custom_gradcam import GradCAM
 
 torch.cuda.is_available = lambda: False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -197,7 +197,7 @@ def get_model(checkpoint_path):
 
 
 def main_model(input_image: str):
-    checkpoint_path = "./full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
+    checkpoint_path = "../full_model_checkpoint_val_loss_19.793_overall_steps_155252.pt"
     model = get_model(checkpoint_path)
     ####################################Grad-CAM Map####################################
     cam = GradCAM(model.object_detector.backbone, "7.2.conv3")
