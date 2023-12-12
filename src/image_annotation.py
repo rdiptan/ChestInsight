@@ -24,10 +24,11 @@ def run_cls(img_dir, labels):
     select_label = None
     report = None
 
-    # Set Streamlit option to avoid warning
-    st.set_option("deprecation.showfileUploaderEncoding", False)
     # Initialize ImageDirManager with the image directory
-    idm = ImageDirManager(img_dir)
+    try:
+        idm = ImageDirManager(img_dir)
+    except FileNotFoundError:
+        st.error("The specified image directory does not exist. If the error persists, please refresh the page.")
 
     # Initialize session state if not already done
     if "files" not in st.session_state:
@@ -102,13 +103,16 @@ def run_cls(img_dir, labels):
     # Main content: annotate images
     img_file_name = idm.get_image(st.session_state["image_index"])
     img_path = os.path.join(img_dir, img_file_name)
-    im = ImageManager(img_path)
-    img = im.get_img()
-    resized_img = im.resizing_img()
-    resized_rects = im.get_resized_rects()
-    with column_1:
-        rects = st_img_label(resized_img, box_color="red", rects=resized_rects)
-
+    try:
+        im = ImageManager(img_path)
+        img = im.get_img()
+        resized_img = im.resizing_img()
+        resized_rects = im.get_resized_rects()
+        with column_1:
+            rects = st_img_label(resized_img, box_color="red", rects=resized_rects)
+    except FileNotFoundError:
+        st.error("The specified image file does not exist. If the error persists, please refresh the page.")
+    
     def annotate():
         im.save_annotation()
         image_annotate_file_name = img_file_name.split(".")[0] + ".xml"
@@ -118,26 +122,29 @@ def run_cls(img_dir, labels):
 
     # Function to save annotation
     # If rectangles are drawn on the image, save the annotation and preview the images
-    if rects:
-        st.button(label="Save", on_click=annotate, key="cls_annon")
-        preview_imgs = im.init_annotation(rects)
+    try:
+        if rects:
+            st.button(label="Save", on_click=annotate, key="cls_annon")
+            preview_imgs = im.init_annotation(rects)
 
-        for i, prev_img in enumerate(preview_imgs):
-            prev_img[0].thumbnail((200, 200))
-            col1, col2 = st.columns(2)
-            with col1:
-                col1.image(prev_img[0])
-            with col2:
-                default_index = 0
-                if prev_img[1]:
-                    default_index = labels.index(prev_img[1])
+            for i, prev_img in enumerate(preview_imgs):
+                prev_img[0].thumbnail((200, 200))
+                col1, col2 = st.columns(2)
+                with col1:
+                    col1.image(prev_img[0])
+                with col2:
+                    default_index = 0
+                    if prev_img[1]:
+                        default_index = labels.index(prev_img[1])
 
-                select_label = col2.selectbox(
-                    "Label", labels, key=f"label_{i}", index=default_index
-                )
+                    select_label = col2.selectbox(
+                        "Label", labels, key=f"label_{i}", index=default_index
+                    )
 
-                im.set_annotation(i, select_label)
-        report = col2.text_input("write report")
+                    im.set_annotation(i, select_label)
+            report = col2.text_input("write report")
+    except UnboundLocalError:
+        st.error("The specified image file does not exist. If the error persists, please refresh the page.")
     return select_label, report
 
 
