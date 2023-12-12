@@ -268,9 +268,6 @@ def features():    # sourcery skip: low-code-quality
             # saves generated datadrame
             dataframe_annotation(f"{path}/*.jpg", custom_labels, select_label, report)
 
-    # FinetuningTab: Here is the entry point for model finetuning
-    # with FinetuningTab:
-    #     st.write('wait a minute')
 
     # PredictionTab: Here is the entry point for report generation
     with PredictionTab:
