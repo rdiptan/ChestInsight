@@ -15,6 +15,10 @@ To install the required packages, run the following command:
 
 ```pip install -r utils/requirements.txt``` 
 
+Download the full model checkpoint from this google [drive link](https://drive.google.com/file/d/1rDxqzOhjqydsOrITJrX0Rj1PAdMeP7Wy/view?usp=sharing).
+Save the model at the root of the directory, i.e.
+```ChestInsight/.```
+
 ### Usage
 
 To use the project, run the following commands:
